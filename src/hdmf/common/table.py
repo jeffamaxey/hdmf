@@ -241,7 +241,8 @@ class DynamicTable(Container):
         'description'
     )
 
-    # __columns__ allows us to add more metadata and "attributes" to specified columns
+    # __columns__ allows us to add more metadata and properties to specified columns (MATT)
+    # It is a tuple of dictionaries
     __columns__ = tuple()
 
     @ExtenderMeta.pre_init
@@ -298,6 +299,8 @@ class DynamicTable(Container):
             if len(all_names) != len(set(all_names)):
                 raise ValueError("'columns' contains columns with duplicate names: %s" % all_names)
 
+            # Make sure that the dataset for unique columns are also unique (Matt)
+            # target is the dataset
             all_targets = [c.target.name for c in columns if isinstance(c, VectorIndex)]
             if len(all_targets) != len(set(all_targets)):
                 raise ValueError("'columns' contains index columns with the same target: %s" % all_targets)
@@ -491,6 +494,7 @@ class DynamicTable(Container):
         tmp = list()
         for d in columns:
             name = d['name']
+            # Retrieves description if exists, otherwise set to 'no description'.
             desc = d.get('description', 'no description')
             col_cls = d.get('class', VectorData)
             data = None
