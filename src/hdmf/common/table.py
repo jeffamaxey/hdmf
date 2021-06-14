@@ -241,6 +241,7 @@ class DynamicTable(Container):
         'description'
     )
 
+    # __columns__ allows us to add more metadata and "attributes" to specified columns
     __columns__ = tuple()
 
     @ExtenderMeta.pre_init
