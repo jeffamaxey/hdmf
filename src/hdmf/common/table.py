@@ -239,10 +239,13 @@ class DynamicTable(Container):
         {'name': 'columns', 'child': True},
         'colnames',
         'description'
-    )
+    ) # Within the container class are  getter and setter methods.
+    # It will create getters and setters for each attribute.
+    # For the ones that say "child", this gives hierarchy where the children are "subfolders"
+    # Think of the container as the main folder (MATT)
 
     # __columns__ allows us to add more metadata and properties to specified columns (MATT)
-    # It is a tuple of dictionaries
+    # It is a tuple of dictionaries. Here is where we set requirements and ragged--> Different lengths?
     __columns__ = tuple()
 
     @ExtenderMeta.pre_init
@@ -257,9 +260,9 @@ class DynamicTable(Container):
             msg = "'__columns__' must be of type tuple, found %s" % type(cls.__columns__)
             raise TypeError(msg)
 
-        if (len(bases) and 'DynamicTable' in globals() and issubclass(bases[-1], Container)
+        if (len(bases) and 'DynamicTable' in globals() and issubclass(bases[-1], DynamicTable) #
                 and bases[-1].__columns__ is not cls.__columns__):
-            new_columns = list(cls.__columns__)
+            new_columns = list(cls.__columns__) # TODO: Check duplicates (container-->__gather_fields)
             new_columns[0:0] = bases[-1].__columns__  # prepend superclass columns to new_columns
             cls.__columns__ = tuple(new_columns)
 
@@ -272,13 +275,13 @@ class DynamicTable(Container):
              'doc': 'the ordered names of the columns in this table. columns must also be provided.',
              'default': None})
     def __init__(self, **kwargs):  # noqa: C901
-        id, columns, desc, colnames = popargs('id', 'columns', 'description', 'colnames', kwargs)
+        id, columns, desc, colnames = popargs('id', 'columns', 'description', 'colnames', kwargs) # Passed in during instance creation (MATT)
         call_docval_func(super().__init__, kwargs)
         self.description = desc
 
         # hold names of optional columns that are defined in __columns__ that are not yet initialized
         # map name to column specification
-        self.__uninit_cols = dict()
+        self.__uninit_cols = dict() # the non-required columns?
 
         # All tables must have ElementIdentifiers (i.e. a primary key column)
         # Here, we figure out what to do for that
@@ -286,7 +289,7 @@ class DynamicTable(Container):
             if not isinstance(id, ElementIdentifiers):
                 id = ElementIdentifiers('id', data=id)
         else:
-            id = ElementIdentifiers('id')
+            id = ElementIdentifiers('id') # If no id is passed in, create empty ElementIdentifer (MATT)
 
         if columns is not None and len(columns) > 0:
             # If columns have been passed in, check them over and process accordingly
@@ -296,11 +299,11 @@ class DynamicTable(Container):
                 raise ValueError("'columns' must be a list of dict, VectorData, DynamicTableRegion, or VectorIndex")
 
             all_names = [c.name for c in columns]
-            if len(all_names) != len(set(all_names)):
+            if len(all_names) != len(set(all_names)): # Checks for duplicate columns (MATT)
                 raise ValueError("'columns' contains columns with duplicate names: %s" % all_names)
 
-            # Make sure that the dataset for unique columns are also unique (Matt)
-            # target is the dataset
+            # Make sure that the dataset for unique columns are also unique i.e Not using same dataset(Matt)
+            # target is the dataset, which is a type VectorData (MATT)
             all_targets = [c.target.name for c in columns if isinstance(c, VectorIndex)]
             if len(all_targets) != len(set(all_targets)):
                 raise ValueError("'columns' contains index columns with the same target: %s" % all_targets)
@@ -340,7 +343,7 @@ class DynamicTable(Container):
         self.id = id
 
         # NOTE: self.colnames and self.columns are always tuples
-        # if kwarg colnames is an h5dataset, self.colnames is still a tuple
+        # if kwarg colnames is an h5dataset, self.colnames is still a tuple (REMOVE)
         if colnames is None or len(colnames) == 0:
             if columns is None:
                 # make placeholder for columns if nothing was given
@@ -358,7 +361,7 @@ class DynamicTable(Container):
                     if isinstance(col, EnumData):
                         skip.add(col.elements.name)
                         tmp.pop(col.elements.name, None)
-                    tmp[col.name] = None
+                    tmp[col.name] = None # This is an ordered set
                 self.colnames = tuple(tmp)
                 self.columns = tuple(columns)
         else:
@@ -367,7 +370,7 @@ class DynamicTable(Container):
                 raise ValueError("Must supply 'columns' if specifying 'colnames'")
             else:
                 # order the columns according to the column names, which does not include indices
-                self.colnames = tuple(pystr(c) for c in colnames)
+                self.colnames = tuple(pystr(c) for c in colnames) 
                 col_dict = {col.name: col for col in columns}
                 # map from vectordata name to list of vectorindex objects where target of last vectorindex is vectordata
                 indices = dict()
