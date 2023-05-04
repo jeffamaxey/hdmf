@@ -253,8 +253,7 @@ class TestDynamicDynamicTable(TestCase):
         builder = self.reader.read_builder()
         # TODO fix ValueError: No specification for 'Container' in namespace 'test_core'
         validator = ValidatorMap(self.manager.namespace_catalog.get_namespace(name=CORE_NAMESPACE))
-        errors = validator.validate(builder)
-        if errors:
+        if errors := validator.validate(builder):
             for err in errors:
                 raise Exception(err)
         self.reader.close()

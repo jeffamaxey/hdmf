@@ -193,8 +193,7 @@ class ExternalResources(Container):
         entity_uri = kwargs['entity_uri']
         if not isinstance(key, Key):
             key = self._add_key(key)
-        resource_entity = Entity(key, resources_idx, entity_id, entity_uri, table=self.entities)
-        return resource_entity
+        return Entity(key, resources_idx, entity_id, entity_uri, table=self.entities)
 
     @docval({'name': 'resource', 'type': str, 'doc': 'The name of the ontology resource.'},
             {'name': 'uri', 'type': str, 'doc': 'The URI associated with ontology resource.'})
@@ -204,8 +203,7 @@ class ExternalResources(Container):
         """
         resource_name = kwargs['resource']
         uri = kwargs['uri']
-        resource = Resource(resource_name, uri, table=self.resources)
-        return resource
+        return Resource(resource_name, uri, table=self.resources)
 
     @docval({'name': 'container', 'type': (str, AbstractContainer),
              'doc': 'The Container/Data object to add or the object id of the Container/Data object to add.'},
@@ -221,8 +219,7 @@ class ExternalResources(Container):
         container, relative_path, field = popargs('container', 'relative_path', 'field', kwargs)
         if isinstance(container, AbstractContainer):
             container = container.object_id
-        obj = Object(container, relative_path, field, table=self.objects)
-        return obj
+        return Object(container, relative_path, field, table=self.objects)
 
     @docval({'name': 'obj', 'type': (int, Object), 'doc': 'The Object that uses the Key.'},
             {'name': 'key', 'type': (int, Key), 'doc': 'The Key that the Object uses.'})
@@ -298,13 +295,12 @@ class ExternalResources(Container):
                 key_idx = self.object_keys['keys_idx', row_idx]
                 if key_idx in key_idx_matches:
                     return self.keys.row[key_idx]
-            msg = ("No key '%s' found for container '%s', relative_path '%s', and field '%s'"
-                   % (key_name, container, relative_path, field))
+            msg = f"No key '{key_name}' found for container '{container}', relative_path '{relative_path}', and field '{field}'"
             raise ValueError(msg)
         else:
             if len(key_idx_matches) == 0:
                 # the key has never been used before
-                raise ValueError("key '%s' does not exist" % key_name)
+                raise ValueError(f"key '{key_name}' does not exist")
             elif len(key_idx_matches) > 1:
                 return [self.keys.row[i] for i in key_idx_matches]
             else:
@@ -316,12 +312,11 @@ class ExternalResources(Container):
         Retrieve resource object with the given resource_name.
         """
         resource_table_idx = self.resources.which(resource=kwargs['resource_name'])
-        if len(resource_table_idx) == 0:
-            # Resource hasn't been created
-            msg = "No resource '%s' exists. Use _add_resource to create a new resource" % kwargs['resource_name']
-            raise ValueError(msg)
-        else:
+        if len(resource_table_idx) != 0:
             return self.resources.row[resource_table_idx[0]]
+            # Resource hasn't been created
+        msg = f"No resource '{kwargs['resource_name']}' exists. Use _add_resource to create a new resource"
+        raise ValueError(msg)
 
     @docval({'name': 'container', 'type': (str, AbstractContainer), 'default': None,
              'doc': ('The Container/Data object that uses the key or '
@@ -404,10 +399,7 @@ class ExternalResources(Container):
 
         if kwargs['resources_idx'] is not None and kwargs['resource_name'] is None and kwargs['resource_uri'] is None:
             resource_table_idx = kwargs['resources_idx']
-        elif (
-            kwargs['resources_idx'] is not None
-            and (kwargs['resource_name'] is not None
-                 or kwargs['resource_uri'] is not None)):
+        elif kwargs['resources_idx'] is not None:
             msg = "Can't have resource_idx with resource_name or resource_uri."
             raise ValueError(msg)
         elif len(self.resources.which(resource=kwargs['resource_name'])) == 0:
@@ -420,7 +412,11 @@ class ExternalResources(Container):
 
         if (resource_table_idx is not None and entity_id is not None and entity_uri is not None):
             add_entity = True
-        elif not (resource_table_idx is None and entity_id is None and resource_uri is None):
+        elif (
+            resource_table_idx is not None
+            or entity_id is not None
+            or resource_uri is not None
+        ):
             msg = ("Specify resource, entity_id, and entity_uri arguments."
                    "All three are required to create a reference")
             raise ValueError(msg)
@@ -446,18 +442,20 @@ class ExternalResources(Container):
         relative_path = kwargs['relative_path']
         field = kwargs['field']
 
-        keys = []
         entities = []
         object_field = self._check_object_field(container, relative_path, field)
-        # Find all keys associated with the object
-        for row_idx in self.object_keys.which(objects_idx=object_field.idx):
-            keys.append(self.object_keys['keys_idx', row_idx])
+        keys = [
+            self.object_keys['keys_idx', row_idx]
+            for row_idx in self.object_keys.which(objects_idx=object_field.idx)
+        ]
         # Find all the entities/resources for each key.
         for key_idx in keys:
             entity_idx = self.entities.which(keys_idx=key_idx)
             entities.append(self.entities.__getitem__(entity_idx[0]))
-        df = pd.DataFrame(entities, columns=['keys_idx', 'resource_idx', 'entity_id', 'entity_uri'])
-        return df
+        return pd.DataFrame(
+            entities,
+            columns=['keys_idx', 'resource_idx', 'entity_id', 'entity_uri'],
+        )
 
     @docval({'name': 'keys', 'type': (list, Key), 'default': None,
              'doc': 'The Key(s) to get external resource data for.'},
@@ -481,10 +479,9 @@ class ExternalResources(Container):
         keys = popargs('keys', kwargs)
         if keys is None:
             keys = [self.keys.row[i] for i in range(len(self.keys))]
-        else:
-            if not isinstance(keys, list):
-                keys = [keys]
-        data = list()
+        elif not isinstance(keys, list):
+            keys = [keys]
+        data = []
         for key in keys:
             rsc_ids = self.entities.which(keys_idx=key.idx)
             for rsc_id in rsc_ids:

@@ -33,8 +33,7 @@ class Baz(Data):
 
 class BazHolder(Container):
 
-    @docval({'name': 'name', 'type': str, 'doc': 'the name of this Baz'},
-            {'name': 'bazs', 'type': list, 'doc': 'some Baz data', 'default': list()})
+    @docval({'name': 'name', 'type': str, 'doc': 'the name of this Baz'}, {'name': 'bazs', 'type': list, 'doc': 'some Baz data', 'default': []})
     def __init__(self, **kwargs):
         name, bazs = getargs('name', 'bazs', kwargs)
         super().__init__(name=name)

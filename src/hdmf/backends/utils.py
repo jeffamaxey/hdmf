@@ -17,7 +17,7 @@ class WriteStatusTracker(dict):
         # NOTE: id may not be sufficient if builders are created inline in the function call, in which
         #       case the id is the id of the functions parameter, so it can be the same for different
         #       builders. This should typically only happen in unit testing, but just to be safe.
-        return str(id(builder)) + "_" + str(builder.name)
+        return f"{id(builder)}_{str(builder.name)}"
 
     def set_written(self, builder):
         """
@@ -76,33 +76,30 @@ class NamespaceToBuilderHelper(object):
 
     @classmethod
     @docval({'name': 'source', 'type': str, 'doc': "source path"})
-    def get_source_name(self, source):
+    def get_source_name(cls, source):
         return os.path.splitext(source)[0]
 
     @classmethod
     def __copy_spec(cls, spec):
-        kwargs = dict()
-        kwargs['attributes'] = cls.__get_new_specs(spec.attributes, spec)
+        kwargs = {'attributes': cls.__get_new_specs(spec.attributes, spec)}
         to_copy = ['doc', 'name', 'default_name', 'linkable', 'quantity', spec.inc_key(), spec.def_key()]
         if isinstance(spec, GroupSpec):
             kwargs['datasets'] = cls.__get_new_specs(spec.datasets, spec)
             kwargs['groups'] = cls.__get_new_specs(spec.groups, spec)
             kwargs['links'] = cls.__get_new_specs(spec.links, spec)
         else:
-            to_copy.append('dtype')
-            to_copy.append('shape')
-            to_copy.append('dims')
+            to_copy.extend(('dtype', 'shape', 'dims'))
         for key in to_copy:
             val = getattr(spec, key)
             if val is not None:
                 kwargs[key] = val
-        ret = spec.build_spec(kwargs)
-        return ret
+        return spec.build_spec(kwargs)
 
     @classmethod
     def __get_new_specs(cls, subspecs, spec):
-        ret = list()
-        for subspec in subspecs:
-            if not spec.is_inherited_spec(subspec) or spec.is_overridden_spec(subspec):
-                ret.append(subspec)
-        return ret
+        return [
+            subspec
+            for subspec in subspecs
+            if not spec.is_inherited_spec(subspec)
+            or spec.is_overridden_spec(subspec)
+        ]

@@ -7,6 +7,7 @@ This is a user guide to interacting with ``AlignedDynamicTable`` objects.
 """
 
 
+
 ###############################################################################
 # Introduction
 # ------------
@@ -296,7 +297,7 @@ customer_table[1]
 #
 
 # Get a range of rows as a DataFrame
-customer_table[0:2]
+customer_table[:2]
 
 ###############################################################################
 #

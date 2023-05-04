@@ -55,7 +55,7 @@ class YAMLSpecWriter(SpecWriter):
         with open(os.path.join(self.__outdir, path), 'w') as stream:
             # Convert the date to a string if necessary
             ns = namespace
-            if 'date' in namespace and isinstance(namespace['date'], datetime):
+            if 'date' in ns and isinstance(ns['date'], datetime):
                 ns = copy.copy(ns)  # copy the namespace to avoid side-effects
                 ns['date'] = ns['date'].isoformat()
             self.__dump_spec({'namespaces': [ns]}, stream)
@@ -120,8 +120,9 @@ class NamespaceBuilder:
         if kwargs['version'] is None:
             # version is required on write as of HDMF 1.5. this check should prevent the writing of namespace files
             # without a verison
-            raise ValueError("Namespace '%s' missing key 'version'. Please specify a version for the extension."
-                             % kwargs['name'])
+            raise ValueError(
+                f"Namespace '{kwargs['name']}' missing key 'version'. Please specify a version for the extension."
+            )
         self.__ns_args = copy.deepcopy(kwargs)
         self.__namespaces = OrderedDict()
         self.__sources = OrderedDict()
@@ -135,7 +136,7 @@ class NamespaceBuilder:
         source, spec = getargs('source', 'spec', kwargs)
         self.__catalog.auto_register(spec, source)
         self.add_source(source)
-        self.__sources[source].setdefault(self.__dt_key, list()).append(spec)
+        self.__sources[source].setdefault(self.__dt_key, []).append(spec)
 
     @docval({'name': 'source', 'type': str, 'doc': 'the path to write the spec to'},
             {'name': 'doc', 'type': str, 'doc': 'additional documentation for the source file', 'default': None},
@@ -162,10 +163,10 @@ class NamespaceBuilder:
         dt, src, ns = getargs('data_type', 'source', 'namespace', kwargs)
         if src is not None:
             self.add_source(src)
-            self.__sources[src].setdefault(self.__dt_key, list()).append(dt)
+            self.__sources[src].setdefault(self.__dt_key, []).append(dt)
         elif ns is not None:
             self.include_namespace(ns)
-            self.__namespaces[ns].setdefault(self.__dt_key, list()).append(dt)
+            self.__namespaces[ns].setdefault(self.__dt_key, []).append(dt)
         else:
             raise ValueError("must specify 'source' or 'namespace' when including type")
 
@@ -192,12 +193,12 @@ class NamespaceBuilder:
         if writer is None:
             writer = YAMLSpecWriter(outdir=getargs('outdir', kwargs))
         ns_args = copy.copy(self.__ns_args)
-        ns_args['schema'] = list()
+        ns_args['schema'] = []
         for ns, info in self.__namespaces.items():
             ns_args['schema'].append(info)
         for path, info in self.__sources.items():
             out = SpecFileBuilder()
-            dts = list()
+            dts = []
             for spec in info[self.__dt_key]:
                 if isinstance(spec, str):
                     dts.append(spec)
@@ -229,9 +230,9 @@ class SpecFileBuilder(dict):
     def add_spec(self, **kwargs):
         spec = getargs('spec', kwargs)
         if isinstance(spec, GroupSpec):
-            self.setdefault('groups', list()).append(spec)
+            self.setdefault('groups', []).append(spec)
         elif isinstance(spec, DatasetSpec):
-            self.setdefault('datasets', list()).append(spec)
+            self.setdefault('datasets', []).append(spec)
 
 
 def export_spec(ns_builder, new_data_types, output_dir):
@@ -250,8 +251,8 @@ def export_spec(ns_builder, new_data_types, output_dir):
         warnings.warn('No data types specified. Exiting.')
         return
 
-    ns_path = ns_builder.name + '.namespace.yaml'
-    ext_path = ns_builder.name + '.extensions.yaml'
+    ns_path = f'{ns_builder.name}.namespace.yaml'
+    ext_path = f'{ns_builder.name}.extensions.yaml'
 
     for data_type in new_data_types:
         ns_builder.add_spec(ext_path, data_type)

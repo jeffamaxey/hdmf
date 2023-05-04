@@ -9,6 +9,7 @@ This is a user guide to interacting with ``DynamicTable`` objects.
 
 """
 
+
 ###############################################################################
 # Introduction
 # ------------
@@ -407,7 +408,7 @@ table[3::-1, 'col1']  # get a list of elements from rows 3 to 0 in reverse order
 
 # the following are equivalent to table[0:3:2, 'col1']
 table[slice(0, 3, 2), 'col1']
-table[np.s_[0:3:2], 'col1']
+table[np.s_[:3:2], 'col1']
 table[[0, 2], 'col1']
 table[np.array([0, 2]), 'col1']
 
@@ -443,12 +444,12 @@ table[:, 'col4']  # returns [[1, 0, -1], [0], [-1, 1], [1, -1]]
 
 table[0]  # get the 0th row of the table as a DataFrame
 table[:2]  # get the first two rows
-table[0:3:2]  # get rows 0 to 3 (exclusive) in steps of 2
+table[:3:2]
 table[3::-1]  # get rows 3 to 0 in reverse order
 
 # the following are equivalent to table[0:3:2]
 table[slice(0, 3, 2)]
-table[np.s_[0:3:2]]
+table[np.s_[:3:2]]
 table[[0, 2]]
 table[np.array([0, 2])]
 
@@ -520,12 +521,12 @@ table.get('col4', default=0)  # you can change the default return value
 
 table['col1'][0]  # get the 0th element from column 'col1'
 table['col1'][:2]  # get a list of the 0th and 1st elements
-table['col1'][0:3:2]  # get a list of the 0th to 3rd (exclusive) elements in steps of 2
+table['col1'][:3:2]
 table['col1'][3::-1]  # get a list of the 3rd to 0th elements in reverse order
 
 # the following are equivalent to table['col1'][0:3:2]
 table['col1'][slice(0, 3, 2)]
-table['col1'][np.s_[0:3:2]]
+table['col1'][np.s_[:3:2]]
 table['col1'][[0, 2]]
 table['col1'][np.array([0, 2])]
 

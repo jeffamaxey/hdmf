@@ -479,7 +479,9 @@ class TestHierarchicalTable(TestCase):
         dtr_sp = DynamicTableRegion(name='sl1', description='sl1', data=np.arange(3), table=p1)
         spt = DynamicTable(name='super_parent_table', description='super_parent_table',
                            columns=[VectorData(name='sp1', description='sp1', data=np.arange(3)), dtr_sp])
-        spt.add_column(name='vic', description='vic', data=list(range(9)), index=list([2, 4, 6]))
+        spt.add_column(
+            name='vic', description='vic', data=list(range(9)), index=[2, 4, 6]
+        )
         hier_df = to_hierarchical_dataframe(spt).reset_index()
         expected_columns = [('super_parent_table', 'id'), ('super_parent_table', 'sp1'), ('super_parent_table', 'vic'),
                             ('parent_table', 'id'), ('parent_table', 'p1'),

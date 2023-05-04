@@ -143,16 +143,12 @@ class TestSpecLoadEdgeCase(TestCase):
 
     def test_build_namespace_missing_version(self):
         """Test that building/creating a SpecNamespace without a version works but raises a warning."""
-        # create namespace without version key
+        msg = f"Loaded namespace 'test_ns' is missing the required key 'version'. Version will be set to '{SpecNamespace.UNVERSIONED}'. Please notify the extension author."
         ns_dict = {
             'doc': 'a test namespace',
             'name': 'test_ns',
-            'schema': [
-                {'source': self.specs_path}
-            ],
+            'schema': [{'source': self.specs_path}],
         }
-        msg = ("Loaded namespace 'test_ns' is missing the required key 'version'. Version will be set to "
-               "'%s'. Please notify the extension author." % SpecNamespace.UNVERSIONED)
         with self.assertWarnsWith(UserWarning, msg):
             namespace = SpecNamespace.build_namespace(**ns_dict)
 
@@ -302,7 +298,13 @@ class TestCustomSpecClasses(TestCase):
         namespace_deps = self.ns_catalog.load_namespaces(namespace_path)
 
         # test that the dependencies are correct, including dependencies of the dependencies
-        expected = set(['Data', 'Container', 'DynamicTable', 'ElementIdentifiers', 'VectorData'])
+        expected = {
+            'Data',
+            'Container',
+            'DynamicTable',
+            'ElementIdentifiers',
+            'VectorData',
+        }
         self.assertSetEqual(set(namespace_deps['test']['hdmf-common']), expected)
 
         # test that the types are loaded
@@ -342,8 +344,16 @@ class TestCustomSpecClasses(TestCase):
         ext_namespace_deps = self.ns_catalog.load_namespaces(ext_namespace_path)
 
         # test that the dependencies are correct, including dependencies of the dependencies
-        expected_deps = set(['TestData', 'TestContainer', 'TestTable', 'Container', 'Data', 'DynamicTable',
-                             'ElementIdentifiers', 'VectorData'])
+        expected_deps = {
+            'TestData',
+            'TestContainer',
+            'TestTable',
+            'Container',
+            'Data',
+            'DynamicTable',
+            'ElementIdentifiers',
+            'VectorData',
+        }
         self.assertSetEqual(set(ext_namespace_deps['test-ext']['test']), expected_deps)
 
     def test_load_namespaces_bad_path(self):

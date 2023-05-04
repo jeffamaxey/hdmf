@@ -12,5 +12,4 @@ class SimpleMultiContainerRoundTrip(H5RoundTripMixin, TestCase):
             Data('data1', [0, 1, 2, 3, 4]),
             Data('data2', [0.0, 1.0, 2.0, 3.0, 4.0]),
         ]
-        multi_container = SimpleMultiContainer('multi', containers)
-        return multi_container
+        return SimpleMultiContainer('multi', containers)

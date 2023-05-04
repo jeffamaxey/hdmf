@@ -192,8 +192,7 @@ class ShapeValidatorTests(TestCase):
 
     def with_table_columns(self):
         cols = [VectorData(**d) for d in self.spec]
-        table = DynamicTable("with_table_columns", 'a test table', columns=cols)
-        return table
+        return DynamicTable("with_table_columns", 'a test table', columns=cols)
 
     def with_columns_and_data(self):
 

@@ -24,9 +24,7 @@ def _exp_warn_msg(cls):
     pfx = cls
     if isinstance(cls, type):
         pfx = cls.__name__
-    msg = ('%s is experimental -- it may be removed in the future and '
-           'is not guaranteed to maintain backward compatibility') % pfx
-    return msg
+    return f'{pfx} is experimental -- it may be removed in the future and is not guaranteed to maintain backward compatibility'
 
 
 class AbstractContainer(metaclass=ExtenderMeta):
@@ -66,7 +64,7 @@ class AbstractContainer(metaclass=ExtenderMeta):
             if val is None:
                 return
             if name in self.fields:
-                msg = "can't set attribute '%s' -- already set" % name
+                msg = f"can't set attribute '{name}' -- already set"
                 raise AttributeError(msg)
             self.fields[name] = val
 
@@ -104,8 +102,7 @@ class AbstractContainer(metaclass=ExtenderMeta):
     def _check_field_spec_keys(cls, field_conf):
         for k in field_conf:
             if k not in cls._pconf_allowed_keys:
-                msg = ("Unrecognized key '%s' in %s config '%s' on %s"
-                       % (k, cls._fieldsname, field_conf['name'], cls.__name__))
+                msg = f"Unrecognized key '{k}' in {cls._fieldsname} config '{field_conf['name']}' on {cls.__name__}"
                 raise ValueError(msg)
 
     @classmethod
@@ -128,7 +125,7 @@ class AbstractContainer(metaclass=ExtenderMeta):
         '''
         fields = cls._get_fields()
         if not isinstance(fields, tuple):
-            msg = "'%s' must be of type tuple" % cls._fieldsname
+            msg = f"'{cls._fieldsname}' must be of type tuple"
             raise TypeError(msg)
 
         # check field specs and create map from field name to field conf dictionary
@@ -149,19 +146,20 @@ class AbstractContainer(metaclass=ExtenderMeta):
 
             base_fields = base_cls._get_fields()  # tuple of field names from base class
             if base_fields is not fields:
-                # check whether new fields spec already exists in base class
-                fields_to_remove_from_base = list()
-                for field_name in fields_dict:
-                    if field_name in base_fields:
-                        fields_to_remove_from_base.append(field_name)
+                fields_to_remove_from_base = [
+                    field_name
+                    for field_name in fields_dict
+                    if field_name in base_fields
+                ]
                 # prepend field specs from base class to fields list of this class
                 # but only field specs that are not redefined in this class
                 base_fields_conf = base_cls.get_fields_conf()  # tuple of fields configurations from base class
-                base_fields_conf_to_add = list()
-                for pconf in base_fields_conf:
-                    if pconf['name'] not in fields_to_remove_from_base:
-                        base_fields_conf_to_add.append(pconf)
-                all_fields_conf[0:0] = base_fields_conf_to_add
+                base_fields_conf_to_add = [
+                    pconf
+                    for pconf in base_fields_conf
+                    if pconf['name'] not in fields_to_remove_from_base
+                ]
+                all_fields_conf[:0] = base_fields_conf_to_add
 
         # create getter and setter if attribute does not already exist
         # if 'doc' not specified in __fields__, use doc from docval of __init__
@@ -181,7 +179,7 @@ class AbstractContainer(metaclass=ExtenderMeta):
             warn(_exp_warn_msg(cls))
         inst.__container_source = kwargs.pop('container_source', None)
         inst.__parent = None
-        inst.__children = list()
+        inst.__children = []
         inst.__modified = True
         inst.__object_id = kwargs.pop('object_id', str(uuid4()))
         inst.parent = kwargs.pop('parent', None)
@@ -193,7 +191,7 @@ class AbstractContainer(metaclass=ExtenderMeta):
         if '/' in name:
             raise ValueError("name '" + name + "' cannot contain '/'")
         self.__name = name
-        self.__field_values = dict()
+        self.__field_values = {}
 
     @property
     def name(self):
@@ -259,15 +257,12 @@ class AbstractContainer(metaclass=ExtenderMeta):
     def add_child(self, **kwargs):
         warn(DeprecationWarning('add_child is deprecated. Set the parent attribute instead.'))
         child = getargs('child', kwargs)
-        if child is not None:
-            # if child.parent is a Container, then the mismatch between child.parent and parent
-            # is used to make a soft/external link from the parent to a child elsewhere
-            # if child.parent is not a Container, it is either None or a Proxy and should be set to self
-            if not isinstance(child.parent, AbstractContainer):
-                # actually add the child to the parent in parent setter
-                child.parent = self
-        else:
-            warn('Cannot add None as child to a container %s' % self.name)
+        if child is None:
+            warn(f'Cannot add None as child to a container {self.name}')
+
+        elif not isinstance(child.parent, AbstractContainer):
+            # actually add the child to the parent in parent setter
+            child.parent = self
 
     @classmethod
     def type_hierarchy(cls):
@@ -299,34 +294,37 @@ class AbstractContainer(metaclass=ExtenderMeta):
         if self.parent is parent_container:
             return
 
-        if self.parent is not None:
-            if isinstance(self.parent, AbstractContainer):
-                raise ValueError(('Cannot reassign parent to Container: %s. '
-                                  'Parent is already: %s.' % (repr(self), repr(self.parent))))
-            else:
-                if parent_container is None:
-                    raise ValueError("Got None for parent of '%s' - cannot overwrite Proxy with NoneType" % repr(self))
-                # NOTE this assumes isinstance(parent_container, Proxy) but we get a circular import
-                # if we try to do that
-                if self.parent.matches(parent_container):
-                    self.__parent = parent_container
-                    parent_container.__children.append(self)
-                    parent_container.set_modified()
-                else:
-                    self.__parent.add_candidate(parent_container)
-        else:
+        if self.parent is None:
             self.__parent = parent_container
             if isinstance(parent_container, Container):
                 parent_container.__children.append(self)
                 parent_container.set_modified()
+
+        elif isinstance(self.parent, AbstractContainer):
+            raise ValueError(('Cannot reassign parent to Container: %s. '
+                              'Parent is already: %s.' % (repr(self), repr(self.parent))))
+        else:
+            if parent_container is None:
+                raise ValueError(
+                    f"Got None for parent of '{repr(self)}' - cannot overwrite Proxy with NoneType"
+                )
+            # NOTE this assumes isinstance(parent_container, Proxy) but we get a circular import
+            # if we try to do that
+            if self.parent.matches(parent_container):
+                self.__parent = parent_container
+                parent_container.__children.append(self)
+                parent_container.set_modified()
+            else:
+                self.__parent.add_candidate(parent_container)
 
     def _remove_child(self, child):
         """Remove a child Container. Intended for use in subclasses that allow dynamic addition of child Containers."""
         if not isinstance(child, AbstractContainer):
             raise ValueError('Cannot remove non-AbstractContainer object from children.')
         if child not in self.children:
-            raise ValueError("%s '%s' is not a child of %s '%s'." % (child.__class__.__name__, child.name,
-                                                                     self.__class__.__name__, self.name))
+            raise ValueError(
+                f"{child.__class__.__name__} '{child.name}' is not a child of {self.__class__.__name__} '{self.name}'."
+            )
         child.__parent = None
         self.__children.remove(child)
         child.set_modified()
@@ -342,7 +340,9 @@ class AbstractContainer(metaclass=ExtenderMeta):
         elif isinstance(self.parent, AbstractContainer):
             self.parent._remove_child(self)
         else:
-            raise ValueError("Cannot reset parent when parent is not an AbstractContainer: %s" % repr(self.parent))
+            raise ValueError(
+                f"Cannot reset parent when parent is not an AbstractContainer: {repr(self.parent)}"
+            )
 
 
 class Container(AbstractContainer):
@@ -364,12 +364,10 @@ class Container(AbstractContainer):
             def container_setter(self, val):
                 if val is not None:
                     if not isinstance(val, AbstractContainer):
-                        msg = ("Field '%s' on %s has a required name and must be a subclass of AbstractContainer."
-                               % (field['name'], self.__class__.__name__))
+                        msg = f"Field '{field['name']}' on {self.__class__.__name__} has a required name and must be a subclass of AbstractContainer."
                         raise ValueError(msg)
                     if val.name != required_name:
-                        msg = ("Field '%s' on %s must be named '%s'."
-                               % (field['name'], self.__class__.__name__, required_name))
+                        msg = f"Field '{field['name']}' on {self.__class__.__name__} must be named '{required_name}'."
                         raise ValueError(msg)
                 ret[idx1](self, val)  # call the previous setter
 
@@ -410,11 +408,11 @@ class Container(AbstractContainer):
             if hasattr(v, '__len__'):
                 if isinstance(v, (np.ndarray, list, tuple)):
                     if len(v) > 0:
-                        template += "  {}: {}\n".format(k, self.__smart_str(v, 1))
+                        template += f"  {k}: {self.__smart_str(v, 1)}\n"
                 elif v:
-                    template += "  {}: {}\n".format(k, self.__smart_str(v, 1))
+                    template += f"  {k}: {self.__smart_str(v, 1)}\n"
             else:
-                template += "  {}: {}\n".format(k, v)
+                template += f"  {k}: {v}\n"
         return template
 
     @staticmethod
@@ -442,7 +440,7 @@ class Container(AbstractContainer):
 
         """
 
-        if isinstance(v, list) or isinstance(v, tuple):
+        if isinstance(v, (list, tuple)):
             if len(v) and isinstance(v[0], AbstractContainer):
                 return Container.__smart_str_list(v, num_indent, '(')
             try:
@@ -454,7 +452,7 @@ class Container(AbstractContainer):
         elif isinstance(v, set):
             return Container.__smart_str_list(sorted(list(v)), num_indent, '{')
         elif isinstance(v, AbstractContainer):
-            return "{} {}".format(getattr(v, 'name'), type(v))
+            return f"{getattr(v, 'name')} {type(v)}"
         else:
             return str(v)
 
@@ -462,7 +460,7 @@ class Container(AbstractContainer):
     def __smart_str_list(str_list, num_indent, left_br):
         if left_br == '(':
             right_br = ')'
-        if left_br == '{':
+        elif left_br == '{':
             right_br = '}'
         if len(str_list) == 0:
             return left_br + ' ' + right_br
@@ -481,7 +479,7 @@ class Container(AbstractContainer):
         left_br = '{'
         right_br = '}'
         if len(d) == 0:
-            return left_br + ' ' + right_br
+            return f'{left_br} {right_br}'
         indent = num_indent * 2 * ' '
         indent_in = (num_indent + 1) * 2 * ' '
         out = left_br
@@ -626,9 +624,7 @@ class MultiContainerInterface(Container):
             noun = noun[0]
         if isinstance(noun, type):
             noun = noun.__name__
-        if noun[0] in ('aeiouAEIOU'):
-            return 'an %s' % noun
-        return 'a %s' % noun
+        return f'an {noun}' if noun[0] in ('aeiouAEIOU') else f'a {noun}'
 
     @staticmethod
     def __join(argtype):
@@ -657,23 +653,19 @@ class MultiContainerInterface(Container):
 
     @classmethod
     def __make_get(cls, func_name, attr_name, container_type):
-        doc = "Get %s from this %s" % (cls.__add_article(container_type), cls.__name__)
+        doc = f"Get {cls.__add_article(container_type)} from this {cls.__name__}"
 
-        @docval({'name': 'name', 'type': str, 'doc': 'the name of the %s' % cls.__join(container_type),
-                 'default': None},
-                rtype=container_type, returns='the %s with the given name' % cls.__join(container_type),
-                func_name=func_name, doc=doc)
+        @docval({'name': 'name', 'type': str, 'doc': f'the name of the {cls.__join(container_type)}', 'default': None}, rtype=container_type, returns=f'the {cls.__join(container_type)} with the given name', func_name=func_name, doc=doc)
         def _func(self, **kwargs):
             name = getargs('name', kwargs)
             d = getattr(self, attr_name)
             ret = None
             if name is None:
                 if len(d) > 1:
-                    msg = ("More than one element in %s of %s '%s' -- must specify a name."
-                           % (attr_name, cls.__name__, self.name))
+                    msg = f"More than one element in {attr_name} of {cls.__name__} '{self.name}' -- must specify a name."
                     raise ValueError(msg)
                 elif len(d) == 0:
-                    msg = "%s of %s '%s' is empty." % (attr_name, cls.__name__, self.name)
+                    msg = f"{attr_name} of {cls.__name__} '{self.name}' is empty."
                     raise ValueError(msg)
                 else:  # only one item in dict
                     for v in d.values():
@@ -681,7 +673,7 @@ class MultiContainerInterface(Container):
             else:
                 ret = d.get(name)
                 if ret is None:
-                    msg = "'%s' not found in %s of %s '%s'." % (name, attr_name, cls.__name__, self.name)
+                    msg = f"'{name}' not found in {attr_name} of {cls.__name__} '{self.name}'."
                     raise KeyError(msg)
             return ret
 
@@ -689,12 +681,9 @@ class MultiContainerInterface(Container):
 
     @classmethod
     def __make_getitem(cls, attr_name, container_type):
-        doc = "Get %s from this %s" % (cls.__add_article(container_type), cls.__name__)
+        doc = f"Get {cls.__add_article(container_type)} from this {cls.__name__}"
 
-        @docval({'name': 'name', 'type': str, 'doc': 'the name of the %s' % cls.__join(container_type),
-                 'default': None},
-                rtype=container_type, returns='the %s with the given name' % cls.__join(container_type),
-                func_name='__getitem__', doc=doc)
+        @docval({'name': 'name', 'type': str, 'doc': f'the name of the {cls.__join(container_type)}', 'default': None}, rtype=container_type, returns=f'the {cls.__join(container_type)} with the given name', func_name='__getitem__', doc=doc)
         def _func(self, **kwargs):
             # NOTE this is the same code as the getter but with different error messages
             name = getargs('name', kwargs)
@@ -702,11 +691,10 @@ class MultiContainerInterface(Container):
             ret = None
             if name is None:
                 if len(d) > 1:
-                    msg = ("More than one %s in %s '%s' -- must specify a name."
-                           % (cls.__join(container_type), cls.__name__, self.name))
+                    msg = f"More than one {cls.__join(container_type)} in {cls.__name__} '{self.name}' -- must specify a name."
                     raise ValueError(msg)
                 elif len(d) == 0:
-                    msg = "%s '%s' is empty." % (cls.__name__, self.name)
+                    msg = f"{cls.__name__} '{self.name}' is empty."
                     raise ValueError(msg)
                 else:  # only one item in dict
                     for v in d.values():
@@ -714,7 +702,7 @@ class MultiContainerInterface(Container):
             else:
                 ret = d.get(name)
                 if ret is None:
-                    msg = "'%s' not found in %s '%s'." % (name, cls.__name__, self.name)
+                    msg = f"'{name}' not found in {cls.__name__} '{self.name}'."
                     raise KeyError(msg)
             return ret
 
@@ -722,11 +710,9 @@ class MultiContainerInterface(Container):
 
     @classmethod
     def __make_add(cls, func_name, attr_name, container_type):
-        doc = "Add %s to this %s" % (cls.__add_article(container_type), cls.__name__)
+        doc = f"Add {cls.__add_article(container_type)} to this {cls.__name__}"
 
-        @docval({'name': attr_name, 'type': (list, tuple, dict, container_type),
-                 'doc': 'the %s to add' % cls.__join(container_type)},
-                func_name=func_name, doc=doc)
+        @docval({'name': attr_name, 'type': (list, tuple, dict, container_type), 'doc': f'the {cls.__join(container_type)} to add'}, func_name=func_name, doc=doc)
         def _func(self, **kwargs):
             container = getargs(attr_name, kwargs)
             if isinstance(container, container_type):
@@ -744,7 +730,7 @@ class MultiContainerInterface(Container):
                     # still need to mark self as modified
                     self.set_modified()
                 if tmp.name in d:
-                    msg = "'%s' already exists in %s '%s'" % (tmp.name, cls.__name__, self.name)
+                    msg = f"'{tmp.name}' already exists in {cls.__name__} '{self.name}'"
                     raise ValueError(msg)
                 d[tmp.name] = tmp
             return container
@@ -753,10 +739,9 @@ class MultiContainerInterface(Container):
 
     @classmethod
     def __make_create(cls, func_name, add_name, container_type):
-        doc = "Create %s and add it to this %s" % (cls.__add_article(container_type), cls.__name__)
+        doc = f"Create {cls.__add_article(container_type)} and add it to this {cls.__name__}"
 
-        @docval(*filter(_not_parent, get_docval(container_type.__init__)), func_name=func_name, doc=doc,
-                returns="the %s object that was created" % cls.__join(container_type), rtype=container_type)
+        @docval(*filter(_not_parent, get_docval(container_type.__init__)), func_name=func_name, doc=doc, returns=f"the {cls.__join(container_type)} object that was created", rtype=container_type)
         def _func(self, **kwargs):
             cargs, ckwargs = fmt_docval_args(container_type.__init__, kwargs)
             ret = container_type(*cargs, **ckwargs)
@@ -767,12 +752,18 @@ class MultiContainerInterface(Container):
 
     @classmethod
     def __make_constructor(cls, clsconf):
-        args = list()
+        args = []
         for conf in clsconf:
             attr_name = conf['attr']
             container_type = conf['type']
-            args.append({'name': attr_name, 'type': (list, tuple, dict, container_type),
-                         'doc': '%s to store in this interface' % cls.__join(container_type), 'default': dict()})
+            args.append(
+                {
+                    'name': attr_name,
+                    'type': (list, tuple, dict, container_type),
+                    'doc': f'{cls.__join(container_type)} to store in this interface',
+                    'default': {},
+                }
+            )
 
         args.append({'name': 'name', 'type': str, 'doc': 'the name of this container', 'default': cls.__name__})
 
@@ -856,7 +847,7 @@ class MultiContainerInterface(Container):
         # get add method name
         add = conf_dict.get('add')
         if add is None:
-            msg = "MultiContainerInterface subclass %s is missing 'add' key in __clsconf__" % cls.__name__
+            msg = f"MultiContainerInterface subclass {cls.__name__} is missing 'add' key in __clsconf__"
             if multi:
                 msg += " at index %d" % conf_index
             raise ValueError(msg)
@@ -864,7 +855,7 @@ class MultiContainerInterface(Container):
         # get container attribute name
         attr = conf_dict.get('attr')
         if attr is None:
-            msg = "MultiContainerInterface subclass %s is missing 'attr' key in __clsconf__" % cls.__name__
+            msg = f"MultiContainerInterface subclass {cls.__name__} is missing 'attr' key in __clsconf__"
             if multi:
                 msg += " at index %d" % conf_index
             raise ValueError(msg)
@@ -872,7 +863,7 @@ class MultiContainerInterface(Container):
         # get container type
         container_type = conf_dict.get('type')
         if container_type is None:
-            msg = "MultiContainerInterface subclass %s is missing 'type' key in __clsconf__" % cls.__name__
+            msg = f"MultiContainerInterface subclass {cls.__name__} is missing 'type' key in __clsconf__"
             if multi:
                 msg += " at index %d" % conf_index
             raise ValueError(msg)
@@ -881,7 +872,7 @@ class MultiContainerInterface(Container):
         if not hasattr(cls, attr):
             getter = cls.__make_getter(attr)
             setter = cls.__make_setter(add)
-            doc = "a dictionary containing the %s in this %s" % (cls.__join(container_type), cls.__name__)
+            doc = f"a dictionary containing the {cls.__join(container_type)} in this {cls.__name__}"
             setattr(cls, attr, property(getter, setter, None, doc))
 
         # create the add method
@@ -951,7 +942,7 @@ class Row(object, metaclass=ExtenderMeta):
             columns = getattr(table_cls, '__columns__')
             if cls.__init__ == bases[-1].__init__:  # check if __init__ is overridden
                 columns = deepcopy(columns)
-                func_args = list()
+                func_args = []
                 for col in columns:
                     func_args.append(col)
                 func_args.append({'name': 'table', 'type': Table, 'default': None,
@@ -963,7 +954,7 @@ class Row(object, metaclass=ExtenderMeta):
                 def __init__(self, **kwargs):
                     super(cls, self).__init__()
                     table, idx = popargs('table', 'idx', kwargs)
-                    self.__keys = list()
+                    self.__keys = []
                     self.__idx = None
                     self.__table = None
                     for k, v in kwargs.items():
@@ -1000,7 +991,7 @@ class RowGetter:
 
     def __init__(self, table):
         self.table = table
-        self.cache = dict()
+        self.cache = {}
 
     def __getitem__(self, idx):
         ret = self.cache.get(idx)
@@ -1041,41 +1032,38 @@ class Table(Data):
 
     @ExtenderMeta.pre_init
     def __build_table_class(cls, name, bases, classdict):
-        if hasattr(cls, '__columns__'):
-            columns = getattr(cls, '__columns__')
+        if not hasattr(cls, '__columns__'):
+            return
+        columns = getattr(cls, '__columns__')
 
-            idx = dict()
-            for i, col in enumerate(columns):
-                idx[col['name']] = i
-            setattr(cls, '__colidx__', idx)
+        idx = {}
+        for i, col in enumerate(columns):
+            idx[col['name']] = i
+        setattr(cls, '__colidx__', idx)
 
-            if cls.__init__ == bases[-1].__init__:  # check if __init__ is overridden
-                name = {'name': 'name', 'type': str, 'doc': 'the name of this table'}
-                defname = getattr(cls, '__defaultname__', None)
-                if defname is not None:
-                    name['default'] = defname  # override the name with the default name if present
+        if cls.__init__ == bases[-1].__init__:  # check if __init__ is overridden
+            name = {'name': 'name', 'type': str, 'doc': 'the name of this table'}
+            defname = getattr(cls, '__defaultname__', None)
+            if defname is not None:
+                name['default'] = defname  # override the name with the default name if present
 
-                @docval(name,
-                        {'name': 'data', 'type': ('array_data', 'data'), 'doc': 'the data in this table',
-                         'default': list()})
-                def __init__(self, **kwargs):
-                    name, data = getargs('name', 'data', kwargs)
-                    colnames = [i['name'] for i in columns]
-                    super(cls, self).__init__(colnames, name, data)
+            @docval(name, {'name': 'data', 'type': ('array_data', 'data'), 'doc': 'the data in this table', 'default': []})
+            def __init__(self, **kwargs):
+                name, data = getargs('name', 'data', kwargs)
+                colnames = [i['name'] for i in columns]
+                super(cls, self).__init__(colnames, name, data)
 
-                setattr(cls, '__init__', __init__)
+            setattr(cls, '__init__', __init__)
 
-            if cls.add_row == bases[-1].add_row:  # check if add_row is overridden
+        if cls.add_row == bases[-1].add_row:  # check if add_row is overridden
 
-                @docval(*columns)
-                def add_row(self, **kwargs):
-                    return super(cls, self).add_row(kwargs)
+            @docval(*columns)
+            def add_row(self, **kwargs):
+                return super(cls, self).add_row(kwargs)
 
-                setattr(cls, 'add_row', add_row)
+            setattr(cls, 'add_row', add_row)
 
-    @docval({'name': 'columns', 'type': (list, tuple), 'doc': 'a list of the columns in this table'},
-            {'name': 'name', 'type': str, 'doc': 'the name of this container'},
-            {'name': 'data', 'type': ('array_data', 'data'), 'doc': 'the source of the data', 'default': list()})
+    @docval({'name': 'columns', 'type': (list, tuple), 'doc': 'a list of the columns in this table'}, {'name': 'name', 'type': str, 'doc': 'the name of this container'}, {'name': 'data', 'type': ('array_data', 'data'), 'doc': 'the source of the data', 'default': []})
     def __init__(self, **kwargs):
         self.__columns = tuple(popargs('columns', kwargs))
         self.__col_index = {name: idx for idx, name in enumerate(self.__columns)}
@@ -1091,7 +1079,7 @@ class Table(Data):
     def add_row(self, **kwargs):
         values = getargs('values', kwargs)
         if not isinstance(self.data, list):
-            msg = 'Cannot append row to %s' % type(self.data)
+            msg = f'Cannot append row to {type(self.data)}'
             raise ValueError(msg)
         ret = len(self.data)
         row = [values[col] for col in self.columns]
@@ -1108,9 +1096,9 @@ class Table(Data):
         colname, value = kwargs.popitem()
         idx = self.__colidx__.get(colname)
         if idx is None:
-            msg = "no '%s' column in %s" % (colname, self.__class__.__name__)
+            msg = f"no '{colname}' column in {self.__class__.__name__}"
             raise KeyError(msg)
-        ret = list()
+        ret = []
         for i in range(len(self.data)):
             row = self.data[i]
             row_val = row[idx]
@@ -1145,7 +1133,7 @@ class Table(Data):
         '''Produce a pandas DataFrame containing this table's data.
         '''
 
-        data = {colname: self[colname] for ii, colname in enumerate(self.columns)}
+        data = {colname: self[colname] for colname in self.columns}
         return pd.DataFrame(data)
 
     @classmethod
@@ -1166,17 +1154,13 @@ class Table(Data):
 
         df, name, extra_ok = getargs('df', 'name', 'extra_ok', kwargs)
 
-        cls_cols = list([col['name'] for col in getattr(cls, '__columns__')])
+        cls_cols = [col['name'] for col in getattr(cls, '__columns__')]
         df_cols = list(df.columns)
 
         missing_columns = set(cls_cols) - set(df_cols)
-        extra_columns = set(df_cols) - set(cls_cols)
-
-        if extra_columns:
+        if extra_columns := set(df_cols) - set(cls_cols):
             raise ValueError(
-                'unrecognized column(s) {} for table class {} (columns {})'.format(
-                    extra_columns, cls.__name__, cls_cols
-                )
+                f'unrecognized column(s) {extra_columns} for table class {cls.__name__} (columns {cls_cols})'
             )
 
         use_index = False
@@ -1185,9 +1169,7 @@ class Table(Data):
 
         elif missing_columns:
             raise ValueError(
-                'missing column(s) {} for table class {} (columns {}, provided {})'.format(
-                    missing_columns, cls.__name__, cls_cols, df_cols
-                )
+                f'missing column(s) {missing_columns} for table class {cls.__name__} (columns {cls_cols}, provided {df_cols})'
             )
 
         data = []
@@ -1198,8 +1180,6 @@ class Table(Data):
                     for colname in cls_cols
                 ])
             else:
-                data.append(tuple([row[colname] for colname in cls_cols]))
+                data.append(tuple(row[colname] for colname in cls_cols))
 
-        if name is None:
-            return cls(data=data)
-        return cls(name=name, data=data)
+        return cls(data=data) if name is None else cls(name=name, data=data)

@@ -47,8 +47,7 @@ class Bar(Container):
 
 class BarHolder(Container):
 
-    @docval({'name': 'name', 'type': str, 'doc': 'the name of this BarHolder'},
-            {'name': 'bars', 'type': ('data', 'array_data'), 'doc': 'bars', 'default': list()})
+    @docval({'name': 'name', 'type': str, 'doc': 'the name of this BarHolder'}, {'name': 'bars', 'type': ('data', 'array_data'), 'doc': 'bars', 'default': []})
     def __init__(self, **kwargs):
         name, bars = getargs('name', 'bars', kwargs)
         super().__init__(name=name)
@@ -76,9 +75,8 @@ class ExtBarMapper(ObjectMapper):
         ''' Get the value of the attribute corresponding to this spec from the given container '''
         spec, container, manager = getargs('spec', 'container', 'manager', kwargs)
         # handle custom mapping of field 'ext_attr' within container BarHolder/Bar -> spec BarHolder/Bar.ext_attr
-        if isinstance(container.parent, BarHolder):
-            if spec.name == 'ext_attr':
-                return container.ext_attr
+        if isinstance(container.parent, BarHolder) and spec.name == 'ext_attr':
+            return container.ext_attr
         return super().get_attr_value(**kwargs)
 
 
@@ -333,8 +331,7 @@ class BarData(Data):
 
 class BarDataHolder(Container):
 
-    @docval({'name': 'name', 'type': str, 'doc': 'the name of this BarDataHolder'},
-            {'name': 'bar_datas', 'type': ('data', 'array_data'), 'doc': 'bar_datas', 'default': list()})
+    @docval({'name': 'name', 'type': str, 'doc': 'the name of this BarDataHolder'}, {'name': 'bar_datas', 'type': ('data', 'array_data'), 'doc': 'bar_datas', 'default': []})
     def __init__(self, **kwargs):
         name, bar_datas = getargs('name', 'bar_datas', kwargs)
         super().__init__(name=name)
@@ -363,9 +360,8 @@ class ExtBarDataMapper(ObjectMapper):
         spec, container, manager = getargs('spec', 'container', 'manager', kwargs)
         # handle custom mapping of field 'ext_attr' within container
         # BardataHolder/BarData -> spec BarDataHolder/BarData.ext_attr
-        if isinstance(container.parent, BarDataHolder):
-            if spec.name == 'ext_attr':
-                return container.ext_attr
+        if isinstance(container.parent, BarDataHolder) and spec.name == 'ext_attr':
+            return container.ext_attr
         return super().get_attr_value(**kwargs)
 
 
@@ -436,13 +432,12 @@ class TestBuildDatasetAddedAttrs(BuildDatasetExtAttrsMixin, TestCase):
             dtype='bool',
             doc='A boolean attribute',
         )
-        refined_spec = DatasetSpec(
+        return DatasetSpec(
             doc='A BarData extended with attribute ext_attr',
             data_type_inc='BarData',
             quantity='*',
             attributes=[ext_attr],
         )
-        return refined_spec
 
     def test_build_added_attr(self):
         """
@@ -497,13 +492,12 @@ class TestBuildDatasetRefinedDtype(BuildDatasetExtAttrsMixin, TestCase):
     """
 
     def get_refined_bar_data_spec(self):
-        refined_spec = DatasetSpec(
+        return DatasetSpec(
             doc='A BarData with refined int64 dtype',
             data_type_inc='BarData',
             dtype='int64',
             quantity='*',
         )
-        return refined_spec
 
     def test_build_refined_dtype_convert(self):
         """
@@ -560,12 +554,11 @@ class TestBuildDatasetNotRefinedDtype(BuildDatasetExtAttrsMixin, TestCase):
     """
 
     def get_refined_bar_data_spec(self):
-        refined_spec = DatasetSpec(
+        return DatasetSpec(
             doc='A BarData',
             data_type_inc='BarData',
             quantity='*',
         )
-        return refined_spec
 
     def test_build_correct_dtype(self):
         """

@@ -383,7 +383,7 @@ class TestDtypeValidation(TestCase):
                                    attributes={'data_type': 'Bar', 'attr1': value},
                                    datasets=[DatasetBuilder('data', value)])
         results = self.vmap.validate(bar_builder)
-        result_strings = set([str(s) for s in results])
+        result_strings = {str(s) for s in results}
         expected_errors = {"Bar/attr1 (my_bar.attr1): incorrect type - expected 'bytes', got 'utf'",
                            "Bar/data (my_bar/data): incorrect type - expected 'bytes', got 'utf'"}
         self.assertEqual(result_strings, expected_errors)
@@ -406,7 +406,7 @@ class TestDtypeValidation(TestCase):
                                    attributes={'data_type': 'Bar', 'attr1': value},
                                    datasets=[DatasetBuilder('data', value)])
         results = self.vmap.validate(bar_builder)
-        result_strings = set([str(s) for s in results])
+        result_strings = {str(s) for s in results}
         expected_errors = {"Bar/attr1 (my_bar.attr1): incorrect type - expected 'int64', got 'int8'",
                            "Bar/data (my_bar/data): incorrect type - expected 'int64', got 'int8'"}
         self.assertEqual(result_strings, expected_errors)
@@ -429,7 +429,7 @@ class TestDtypeValidation(TestCase):
                                    attributes={'data_type': 'Bar', 'attr1': value},
                                    datasets=[DatasetBuilder('data', value)])
         results = self.vmap.validate(bar_builder)
-        result_strings = set([str(s) for s in results])
+        result_strings = {str(s) for s in results}
         expected_errors = {"Bar/attr1 (my_bar.attr1): incorrect type - expected 'numeric', got 'bool'",
                            "Bar/data (my_bar/data): incorrect type - expected 'numeric', got 'bool'"}
         self.assertEqual(result_strings, expected_errors)
@@ -466,7 +466,7 @@ class Test1DArrayValidation(TestCase):
                                    attributes={'data_type': 'Bar', 'attr1': value},
                                    datasets=[DatasetBuilder('data', value)])
         results = self.vmap.validate(bar_builder)
-        result_strings = set([str(s) for s in results])
+        result_strings = {str(s) for s in results}
         expected_errors = {("Bar/attr1 (my_bar.attr1): incorrect shape - expected an array of shape '(None,)', "
                             "got non-array data 'a string'"),
                            ("Bar/data (my_bar/data): incorrect shape - expected an array of shape '(None,)', "

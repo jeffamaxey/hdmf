@@ -98,7 +98,7 @@ class AbstractQueryMixin(metaclass=ABCMeta):
         '''
         Test wrapper getitem using slice
         '''
-        result = self.wrapper[0:5]
+        result = self.wrapper[:5]
         expected = [0, 1, 2, 3, 4]
         self.assertTrue(np.array_equal(result, expected))
 

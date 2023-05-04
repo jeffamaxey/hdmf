@@ -38,7 +38,7 @@ class Bar(Container):
 
     def __str__(self):
         attrs = ('name', 'data', 'attr1', 'attr2', 'attr3', 'foo')
-        return ','.join('%s=%s' % (a, getattr(self, a)) for a in attrs)
+        return ','.join(f'{a}={getattr(self, a)}' for a in attrs)
 
     @property
     def data_type(self):

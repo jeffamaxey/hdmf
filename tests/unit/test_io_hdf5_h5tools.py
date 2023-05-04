@@ -79,10 +79,6 @@ class H5IOTest(TestCase):
                     with self.subTest(data_type=data_type, iter_axis=iter_axis, buffer_size=buffer_size):
                         with warnings.catch_warnings(record=True) as w:
                             dci = DataChunkIterator(data=data, buffer_size=buffer_size, iter_axis=iter_axis)
-                            if len(w) <= 1:
-                                # init may throw UserWarning for iterating over not-first dim of a list. ignore here
-                                pass
-
                         dset_name = '%s, %d, %d' % (data_type, iter_axis, buffer_size)
                         my_dset = HDF5IO.__chunked_iter_fill__(self.f, dset_name, dci)
 
@@ -91,7 +87,7 @@ class H5IOTest(TestCase):
                         elif data_type == 'numpy':
                             self.assertTrue(np.all(my_dset[:] == data))
                             self.assertTupleEqual(my_dset.shape, data.shape)
-                        elif data_type == 'list' or data_type == 'nanlist':
+                        elif data_type in ['list', 'nanlist']:
                             data_np = np.array(data)
                             np.testing.assert_array_equal(my_dset[:], data_np)
                             self.assertTupleEqual(my_dset.shape, data_np.shape)
@@ -820,8 +816,7 @@ class TestHDF5IO(TestCase):
 
     def test_set_file_mismatch(self):
         self.file_obj = File(get_temp_filepath(), 'w')
-        err_msg = ("You argued %s as this object's path, but supplied a file with filename: %s"
-                   % (self.path, self.file_obj.filename))
+        err_msg = f"You argued {self.path} as this object's path, but supplied a file with filename: {self.file_obj.filename}"
         with self.assertRaisesWith(ValueError, err_msg):
             HDF5IO(self.path, manager=self.manager, mode='w', file=self.file_obj)
 
@@ -1029,7 +1024,7 @@ class HDF5IOMultiFileTest(TestCase):
 
     def setUp(self):
         numfiles = 3
-        self.paths = [get_temp_filepath() for i in range(numfiles)]
+        self.paths = [get_temp_filepath() for _ in range(numfiles)]
 
         # On Windows h5py cannot truncate an open file in write mode.
         # The temp file will be closed before h5py truncates it
@@ -1237,14 +1232,12 @@ class HDF5IOInitNoFileTest(TestCase):
 
     def test_init_no_file_r(self):
         self.path = "test_init_nofile_r.h5"
-        with self.assertRaisesWith(UnsupportedOperation,
-                                   "Unable to open file %s in 'r' mode. File does not exist." % self.path):
+        with self.assertRaisesWith(UnsupportedOperation, f"Unable to open file {self.path} in 'r' mode. File does not exist."):
             HDF5IO(self.path, mode='r')
 
     def test_init_no_file_rplus(self):
         self.path = "test_init_nofile_rplus.h5"
-        with self.assertRaisesWith(UnsupportedOperation,
-                                   "Unable to open file %s in 'r+' mode. File does not exist." % self.path):
+        with self.assertRaisesWith(UnsupportedOperation, f"Unable to open file {self.path} in 'r+' mode. File does not exist."):
             HDF5IO(self.path, mode='r+')
 
     def test_init_no_file_ok(self):
@@ -1275,13 +1268,11 @@ class HDF5IOInitFileExistsTest(TestCase):
             os.remove(self.path)
 
     def test_init_wminus_file_exists(self):
-        with self.assertRaisesWith(UnsupportedOperation,
-                                   "Unable to open file %s in 'w-' mode. File already exists." % self.path):
+        with self.assertRaisesWith(UnsupportedOperation, f"Unable to open file {self.path} in 'w-' mode. File already exists."):
             self.io = HDF5IO(self.path, mode='w-')
 
     def test_init_x_file_exists(self):
-        with self.assertRaisesWith(UnsupportedOperation,
-                                   "Unable to open file %s in 'x' mode. File already exists." % self.path):
+        with self.assertRaisesWith(UnsupportedOperation, f"Unable to open file {self.path} in 'x' mode. File already exists."):
             self.io = HDF5IO(self.path, mode='x')
 
     def test_init_file_exists_ok(self):
@@ -1311,20 +1302,17 @@ class HDF5IOReadNoDataTest(TestCase):
 
     def test_read_no_data_r(self):
         self.io = HDF5IO(self.path, mode='r')
-        with self.assertRaisesWith(UnsupportedOperation,
-                                   "Cannot read data from file %s in mode 'r'. There are no values." % self.path):
+        with self.assertRaisesWith(UnsupportedOperation, f"Cannot read data from file {self.path} in mode 'r'. There are no values."):
             self.io.read()
 
     def test_read_no_data_rplus(self):
         self.io = HDF5IO(self.path, mode='r+')
-        with self.assertRaisesWith(UnsupportedOperation,
-                                   "Cannot read data from file %s in mode 'r+'. There are no values." % self.path):
+        with self.assertRaisesWith(UnsupportedOperation, f"Cannot read data from file {self.path} in mode 'r+'. There are no values."):
             self.io.read()
 
     def test_read_no_data_a(self):
         self.io = HDF5IO(self.path, mode='a')
-        with self.assertRaisesWith(UnsupportedOperation,
-                                   "Cannot read data from file %s in mode 'a'. There are no values." % self.path):
+        with self.assertRaisesWith(UnsupportedOperation, f"Cannot read data from file {self.path} in mode 'a'. There are no values."):
             self.io.read()
 
 
@@ -1358,9 +1346,7 @@ class HDF5IOReadData(TestCase):
 
     def test_read_file_w(self):
         with HDF5IO(self.path, manager=get_foo_buildmanager(), mode='w') as io:
-            with self.assertRaisesWith(UnsupportedOperation,
-                                       "Cannot read from file %s in mode 'w'. Please use mode 'r', 'r+', or 'a'."
-                                       % self.path):
+            with self.assertRaisesWith(UnsupportedOperation, f"Cannot read from file {self.path} in mode 'w'. Please use mode 'r', 'r+', or 'a'."):
                 read_foofile1 = io.read()
                 self.assertListEqual(self.foofile1.buckets['bucket1'].foos['foo1'].my_data,
                                      read_foofile1.buckets['bucket1'].foos['foo1'].my_data[:].tolist())
@@ -1386,7 +1372,7 @@ class HDF5IOReadBuilderClosed(TestCase):
     def test_read_closed(self):
         self.io = HDF5IO(self.path, mode='r')
         self.io.close()
-        msg = "Cannot read data from closed HDF5 file '%s'" % self.path
+        msg = f"Cannot read data from closed HDF5 file '{self.path}'"
         with self.assertRaisesWith(UnsupportedOperation, msg):
             self.io.read_builder()
 
@@ -1590,9 +1576,7 @@ class H5DataIOValid(TestCase):
             np.array(self.foo2.my_data)
 
         with self.assertRaisesWith(InvalidDataIOError, "Cannot iterate on data. Data is not valid."):
-            for i in self.foo2.my_data:
-                pass
-
+            pass
         with self.assertRaisesWith(InvalidDataIOError, "Cannot iterate on data. Data is not valid."):
             iter(self.foo2.my_data)
 
@@ -1875,7 +1859,7 @@ class TestLoadNamespaces(TestCase):
 
         # load the namespace from file
         ns_catalog = NamespaceCatalog()
-        msg = "Loaded namespace '%s' is unversioned. Please notify the extension author." % CORE_NAMESPACE
+        msg = f"Loaded namespace '{CORE_NAMESPACE}' is unversioned. Please notify the extension author."
         with self.assertWarnsWith(UserWarning, msg):
             HDF5IO.load_namespaces(ns_catalog, self.path)
 
@@ -1941,7 +1925,7 @@ class TestLoadNamespaces(TestCase):
         with h5py.File(self.path, 'r') as file_obj:
             ns_catalog = NamespaceCatalog()
 
-            msg = "You argued 'different_path' as this object's path, but supplied a file with filename: %s" % self.path
+            msg = f"You argued 'different_path' as this object's path, but supplied a file with filename: {self.path}"
             with self.assertRaisesWith(ValueError, msg):
                 HDF5IO.load_namespaces(ns_catalog, path='different_path', file=file_obj)
 
@@ -1990,7 +1974,7 @@ class TestLoadNamespaces(TestCase):
 
         # load the namespace from file
         ns_catalog = NamespaceCatalog()
-        msg = "No cached namespaces found in %s" % self.path
+        msg = f"No cached namespaces found in {self.path}"
         with self.assertWarnsWith(UserWarning, msg):
             ret = HDF5IO.load_namespaces(ns_catalog, self.path)
         self.assertDictEqual(ret, {})
@@ -2015,9 +1999,9 @@ class TestLoadNamespaces(TestCase):
             old_test_source = f['/specifications/test_core/0.1.0/test']
             # strip the ]} from end, then add to groups
             if H5PY_3:  # string datasets are returned as bytes
-                old_test_source[()] = old_test_source[()][0:-2].decode('utf-8') + added_types
+                old_test_source[()] = old_test_source[()][:-2].decode('utf-8') + added_types
             else:
-                old_test_source[()] = old_test_source[()][0:-2] + added_types
+                old_test_source[()] = old_test_source[()][:-2] + added_types
             new_ns = ('{"namespaces":[{"doc":"a test namespace","schema":['
                       '{"namespace":"test_core","my_data_types":["Foo"]},'
                       '{"source":"test-ext.extensions"}'
@@ -2206,7 +2190,7 @@ class TestGetNamespaces(TestCase):
             del f.attrs[SPEC_LOC_ATTR]
 
         # load the namespace from file
-        msg = "No cached namespaces found in %s" % self.path
+        msg = f"No cached namespaces found in {self.path}"
         with self.assertWarnsWith(UserWarning, msg):
             ret = HDF5IO.get_namespaces(path=self.path)
         self.assertDictEqual(ret, {})
@@ -2726,10 +2710,8 @@ class TestExport(TestCase):
 
     def test_export_dset_refs(self):
         """Test that exporting a written container with a dataset of references works."""
-        bazs = []
         num_bazs = 10
-        for i in range(num_bazs):
-            bazs.append(Baz(name='baz%d' % i))
+        bazs = [Baz(name='baz%d' % i) for i in range(num_bazs)]
         baz_data = BazData(name='baz_data1', data=bazs)
         bucket = BazBucket(name='bucket1', bazs=bazs.copy(), baz_data=baz_data)
 
@@ -2870,7 +2852,7 @@ class TestExport(TestCase):
 
         with HDF5IO(self.paths[0], mode='r') as read_io:
             with HDF5IO(self.paths[1], mode='a') as export_io:
-                msg = "Cannot export to file %s in mode 'a'. Please use mode 'w'." % self.paths[1]
+                msg = f"Cannot export to file {self.paths[1]} in mode 'a'. Please use mode 'w'."
                 with self.assertRaisesWith(UnsupportedOperation, msg):
                     export_io.export(src_io=read_io)
 
@@ -2899,10 +2881,8 @@ class TestDatasetRefs(TestCase):
 
     def test_roundtrip(self):
         self.path = get_temp_filepath()
-        bazs = []
         num_bazs = 10
-        for i in range(num_bazs):
-            bazs.append(Baz(name='baz%d' % i))
+        bazs = [Baz(name='baz%d' % i) for i in range(num_bazs)]
         baz_data = BazData(name='baz_data1', data=bazs)
         bucket = BazBucket(name='bucket1', bazs=bazs.copy(), baz_data=baz_data)
 

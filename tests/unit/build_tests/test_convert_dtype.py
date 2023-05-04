@@ -205,8 +205,7 @@ class TestConvertDtype(TestCase):
             with self.subTest(dtype=dtype):
                 s = np.dtype(self._get_type(spec_type))
                 g = np.dtype(self._get_type(dtype))
-                msg = ("Spec 'data': Value with data type %s is being converted to data type %s as specified."
-                       % (g.name, s.name))
+                msg = f"Spec 'data': Value with data type {g.name} is being converted to data type {s.name} as specified."
                 with self.assertWarnsWith(UserWarning, msg):
                     ret = ObjectMapper.convert_dtype(spec, value)
                 self.assertTupleEqual(ret, match)
@@ -224,8 +223,8 @@ class TestConvertDtype(TestCase):
                 self.assertIs(ret[0].dtype.type, match[1])
 
     def _test_change_basetype_helper(self, spec_type, value_types, exp_type):
-        data = 1
         spec = DatasetSpec('an example dataset', spec_type, name='data')
+        data = 1
         match = (self._get_type(exp_type)(data), self._get_type(exp_type))
         for dtype in value_types:
             value = self._get_type(dtype)(data)  # convert data to given dtype
@@ -233,8 +232,7 @@ class TestConvertDtype(TestCase):
                 s = np.dtype(self._get_type(spec_type))
                 e = np.dtype(self._get_type(exp_type))
                 g = np.dtype(self._get_type(dtype))
-                msg = ("Spec 'data': Value with data type %s is being converted to data type %s "
-                       "(min specification: %s)." % (g.name, e.name, s.name))
+                msg = f"Spec 'data': Value with data type {g.name} is being converted to data type {e.name} (min specification: {s.name})."
                 with self.assertWarnsWith(UserWarning, msg):
                     ret = ObjectMapper.convert_dtype(spec, value)
                 self.assertTupleEqual(ret, match)
@@ -248,7 +246,7 @@ class TestConvertDtype(TestCase):
             with self.subTest(dtype=dtype):
                 s = np.dtype(self._get_type(spec_type))
                 g = np.dtype(self._get_type(dtype))
-                msg = "expected %s, received %s - must supply %s" % (s.name, g.name, s.name)
+                msg = f"expected {s.name}, received {g.name} - must supply {s.name}"
                 with self.assertRaisesWith(ValueError, msg):
                     ObjectMapper.convert_dtype(spec, value)
 

@@ -139,13 +139,13 @@ def to_hierarchical_dataframe(dynamic_table):
     # occur when converting the index to pd.MultiIndex. To avoid this error, we next check if any
     # of the columns in our index are of type list or np.ndarray
     unhashable_index_cols = []
-    if len(index) > 0:
+    if index:
         unhashable_index_cols = [i for i, v in enumerate(index[0]) if isinstance(v, (list, np.ndarray))]
 
     # If we have any unhashable list or np.array objects in the index then update them to tuples.
     # Ideally we would detect this case when constructing the index, but it is easier to do this
     # here and it should not be much more expensive, but it requires iterating over all rows again
-    if len(unhashable_index_cols) > 0:
+    if unhashable_index_cols:
         for i, v in enumerate(index):
             temp = list(v)
             for ci in unhashable_index_cols:
@@ -154,8 +154,7 @@ def to_hierarchical_dataframe(dynamic_table):
 
     # Construct the pandas dataframe with the hierarchical multi-index
     multi_index = pd.MultiIndex.from_tuples(index, names=index_names)
-    out_df = pd.DataFrame(data=data, index=multi_index, columns=columns)
-    return out_df
+    return pd.DataFrame(data=data, index=multi_index, columns=columns)
 
 
 def __get_col_name(col):
@@ -179,19 +178,15 @@ def __flatten_column_name(col):
 
     :returns: If col is a tuple then the result is a flat tuple otherwise col is returned as is
     """
-    if isinstance(col, tuple):
-        re = col
-        while np.any([isinstance(v, tuple) for v in re]):
-            temp = []
-            for v in re:
-                if isinstance(v, tuple):
-                    temp += list(v)
-                else:
-                    temp += [v, ]
-            re = temp
-        return tuple(re)
-    else:
+    if not isinstance(col, tuple):
         return col
+    re = col
+    while np.any([isinstance(v, tuple) for v in re]):
+        temp = []
+        for v in re:
+            temp += list(v) if isinstance(v, tuple) else [v, ]
+        re = temp
+    return tuple(re)
 
 
 @docval({'name': 'dataframe', 'type': pd.DataFrame,
@@ -214,10 +209,9 @@ def drop_id_columns(**kwargs):
     """
     dataframe, inplace = getargs('dataframe', 'inplace', kwargs)
     col_name = 'id'
-    drop_labels = []
-    for col in dataframe.columns:
-        if __get_col_name(col) == col_name:
-            drop_labels.append(col)
+    drop_labels = [
+        col for col in dataframe.columns if __get_col_name(col) == col_name
+    ]
     re = dataframe.drop(labels=drop_labels, axis=1, inplace=inplace)
     return dataframe if inplace else re
 

@@ -19,6 +19,8 @@ class TestClassGenerator(TestCase):
     def test_register_generator(self):
         """Test TypeMap.register_generator and ClassGenerator.register_generator."""
 
+
+
         class MyClassGenerator(CustomClassGenerator):
 
             @classmethod
@@ -27,13 +29,14 @@ class TestClassGenerator(TestCase):
 
             @classmethod
             def process_field_spec(cls, classdict, docval_args, parent_cls, attr_name, not_inherited_fields, type_map,
-                                   spec):
+                                           spec):
                 # append attr_name to classdict['__custom_fields__'] list
-                classdict.setdefault('process_field_spec', list()).append(attr_name)
+                classdict.setdefault('process_field_spec', []).append(attr_name)
 
             @classmethod
             def post_process(cls, classdict, bases, docval_args, spec):
                 classdict['post_process'] = True
+
 
         spec = GroupSpec(
             doc='A test group specification with a data type',
@@ -319,8 +322,8 @@ class TestGetClassSeparateNamespace(TestCase):
             namespace_name=CORE_NAMESPACE,
             specs=[self.bar_spec],
             output_dir=self.test_dir,
-            incl_types=dict(),
-            type_map=self.type_map
+            incl_types={},
+            type_map=self.type_map,
         )
 
     def tearDown(self):
@@ -540,7 +543,7 @@ class TestBaseProcessFieldSpec(TestCase):
             'bar': spec.groups[0]
         }
 
-        docval_args = list()
+        docval_args = []
         for i, attr_name in enumerate(not_inherited_fields):
             with self.subTest(attr_name=attr_name):
                 CustomClassGenerator.process_field_spec(
@@ -565,7 +568,7 @@ class TestBaseProcessFieldSpec(TestCase):
         )
         not_inherited_fields = {'attr1': spec.get_attribute('attr1')}
 
-        docval_args = list()
+        docval_args = []
         CustomClassGenerator.process_field_spec(
             classdict={},
             docval_args=docval_args,
@@ -590,7 +593,7 @@ class TestBaseProcessFieldSpec(TestCase):
         )
         not_inherited_fields = {'dset1': spec.get_dataset('dset1')}
 
-        docval_args = list()
+        docval_args = []
         CustomClassGenerator.process_field_spec(
             classdict={},
             docval_args=docval_args,
@@ -616,7 +619,7 @@ class TestBaseProcessFieldSpec(TestCase):
         )
         not_inherited_fields = {'attr1': spec.get_attribute('attr1')}
 
-        docval_args = list()
+        docval_args = []
         CustomClassGenerator.process_field_spec(
             classdict={},
             docval_args=docval_args,
@@ -641,7 +644,7 @@ class TestBaseProcessFieldSpec(TestCase):
         )
         not_inherited_fields = {'attr1': spec.get_attribute('attr1')}
 
-        docval_args = list()
+        docval_args = []
         CustomClassGenerator.process_field_spec(
             classdict={},
             docval_args=docval_args,
@@ -672,7 +675,7 @@ class TestBaseProcessFieldSpec(TestCase):
         )
         not_inherited_fields = {'attr1': spec.get_group('group1').get_attribute('attr1')}
 
-        docval_args = list()
+        docval_args = []
         CustomClassGenerator.process_field_spec(
             classdict={},
             docval_args=docval_args,
@@ -704,7 +707,7 @@ class TestBaseProcessFieldSpec(TestCase):
         )
         not_inherited_fields = {'attr1': spec.get_group('group1').get_attribute('attr1')}
 
-        docval_args = list()
+        docval_args = []
         CustomClassGenerator.process_field_spec(
             classdict={},
             docval_args=docval_args,
@@ -835,7 +838,7 @@ class TestMCIProcessFieldSpec(TestCase):
 
     def test_update_docval(self):
         spec = GroupSpec(data_type_inc='EmptyBar', doc='test multi', quantity='*')
-        classdict = dict()
+        classdict = {}
         docval_args = []
         not_inherited_fields = {'empty_bars': spec}
         MCIClassGenerator.process_field_spec(
@@ -861,7 +864,7 @@ class TestMCIProcessFieldSpec(TestCase):
 
     def test_update_init_zero_or_more(self):
         spec = GroupSpec(data_type_inc='EmptyBar', doc='test multi', quantity='*')
-        classdict = dict()
+        classdict = {}
         docval_args = []
         not_inherited_fields = {'empty_bars': spec}
         MCIClassGenerator.process_field_spec(
@@ -879,7 +882,7 @@ class TestMCIProcessFieldSpec(TestCase):
 
     def test_update_init_one_or_more(self):
         spec = GroupSpec(data_type_inc='EmptyBar', doc='test multi', quantity='+')
-        classdict = dict()
+        classdict = {}
         docval_args = []
         not_inherited_fields = {'empty_bars': spec}
         MCIClassGenerator.process_field_spec(

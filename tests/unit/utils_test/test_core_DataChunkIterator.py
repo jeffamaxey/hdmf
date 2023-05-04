@@ -21,8 +21,6 @@ class DataChunkIteratorTests(TestCase):
         self.assertEqual(dci.buffer_size, 1)
         self.assertEqual(dci.iter_axis, 0)
         count = 0
-        for chunk in dci:
-            pass
         self.assertEqual(count, 0)
         self.assertIsNone(dci.recommended_data_shape())
         self.assertIsNone(dci.recommended_chunk_shape())
@@ -43,8 +41,6 @@ class DataChunkIteratorTests(TestCase):
         self.assertTupleEqual(dci.maxshape, (3,))
         self.assertEqual(dci.dtype, np.dtype('int'))
         count = 0
-        for chunk in dci:
-            pass
         self.assertEqual(count, 0)
         self.assertTupleEqual(dci.recommended_data_shape(), (3,))
         self.assertIsNone(dci.recommended_chunk_shape())
@@ -351,9 +347,10 @@ class DataChunkIteratorTests(TestCase):
             a = np.arange(30).reshape(5, 2, 3)
             while count < a.shape[0]:
                 val = a[count, :, :]
-                count = count + 1
+                count += 1
                 yield val
             return
+
         dci = DataChunkIterator(data=my_iter(), buffer_size=2)
         count = 0
         for chunk in dci:
@@ -372,9 +369,10 @@ class DataChunkIteratorTests(TestCase):
             a = np.arange(45).reshape(5, 3, 3)
             while count < a.shape[1]:
                 val = a[:, count, :]
-                count = count + 1
+                count += 1
                 yield val
             return
+
         dci = DataChunkIterator(data=my_iter(), buffer_size=2, iter_axis=1)
         count = 0
         for chunk in dci:
@@ -393,9 +391,10 @@ class DataChunkIteratorTests(TestCase):
             a = np.arange(30).reshape(5, 2, 3)
             while count < a.shape[2]:
                 val = a[:, :, count]
-                count = count + 1
+                count += 1
                 yield val
             return
+
         dci = DataChunkIterator(data=my_iter(), buffer_size=2, iter_axis=2)
         count = 0
         for chunk in dci:
@@ -414,9 +413,10 @@ class DataChunkIteratorTests(TestCase):
             a = np.arange(30).reshape(5, 2, 3)
             while count < a.shape[2]:
                 val = a[:, :, count]
-                count = count + 1
+                count += 1
                 yield val
             return
+
         # iterator returns slices of size (5, 2)
         # because iter_axis is by default 0, these chunks will be placed along the first dimension
         dci = DataChunkIterator(data=my_iter(), buffer_size=2)

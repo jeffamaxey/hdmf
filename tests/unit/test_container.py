@@ -45,9 +45,7 @@ class TestContainer(TestCase):
         self.assertIs(parent_obj.children[0], child_obj)
 
         another_obj = Container('obj3')
-        with self.assertRaisesWith(ValueError,
-                                   'Cannot reassign parent to Container: %s. Parent is already: %s.'
-                                   % (repr(child_obj), repr(child_obj.parent))):
+        with self.assertRaisesWith(ValueError, f'Cannot reassign parent to Container: {repr(child_obj)}. Parent is already: {repr(child_obj.parent)}.'):
             child_obj.parent = another_obj
         self.assertIs(child_obj.parent, parent_obj)
         self.assertIs(parent_obj.children[0], child_obj)
@@ -213,7 +211,7 @@ class TestContainer(TestCase):
         """
         obj = Container('obj1')
         obj.parent = object()
-        msg = "Cannot reset parent when parent is not an AbstractContainer: %s" % repr(obj.parent)
+        msg = f"Cannot reset parent when parent is not an AbstractContainer: {repr(obj.parent)}"
         with self.assertRaisesWith(ValueError, msg):
             obj.reset_parent()
 

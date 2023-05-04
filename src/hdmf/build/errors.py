@@ -12,7 +12,9 @@ class BuildError(Exception):
     def __init__(self, **kwargs):
         self.__builder = getargs('builder', kwargs)
         self.__reason = getargs('reason', kwargs)
-        self.__message = "%s (%s): %s" % (self.__builder.name, self.__builder.path, self.__reason)
+        self.__message = (
+            f"{self.__builder.name} ({self.__builder.path}): {self.__reason}"
+        )
         super().__init__(self.__message)
 
 
@@ -23,8 +25,7 @@ class OrphanContainerBuildError(BuildError):
     def __init__(self, **kwargs):
         builder = getargs('builder', kwargs)
         self.__container = getargs('container', kwargs)
-        reason = ("Linked %s '%s' has no parent. Remove the link or ensure the linked container is added properly."
-                  % (self.__container.__class__.__name__, self.__container.name))
+        reason = f"Linked {self.__container.__class__.__name__} '{self.__container.name}' has no parent. Remove the link or ensure the linked container is added properly."
         super().__init__(builder=builder, reason=reason)
 
 
@@ -35,8 +36,7 @@ class ReferenceTargetNotBuiltError(BuildError):
     def __init__(self, **kwargs):
         builder = getargs('builder', kwargs)
         self.__container = getargs('container', kwargs)
-        reason = ("Could not find already-built Builder for %s '%s' in BuildManager"
-                  % (self.__container.__class__.__name__, self.__container.name))
+        reason = f"Could not find already-built Builder for {self.__container.__class__.__name__} '{self.__container.name}' in BuildManager"
         super().__init__(builder=builder, reason=reason)
 
 

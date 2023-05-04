@@ -291,8 +291,7 @@ class TestNoAttribute(TestBase):
         self.type_map.register_map(Foo, Unmapper)  # override
 
         container_inst = Foo('my_foo', list(range(10)), 'value1', 10)
-        msg = ("Foo 'my_foo' does not have attribute 'unknown' for mapping to spec: %s"
-               % self.foo_spec.get_dataset('my_data'))
+        msg = f"Foo 'my_foo' does not have attribute 'unknown' for mapping to spec: {self.foo_spec.get_dataset('my_data')}"
         with self.assertRaisesWith(ContainerConfigurationError, msg):
             self.manager.build(container_inst)
 

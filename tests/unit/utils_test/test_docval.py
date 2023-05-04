@@ -65,24 +65,15 @@ class MyChainClass(MyTestClass):
 
     @property
     def arg1(self):
-        if isinstance(self._arg1, MyChainClass):
-            return self._arg1.arg1
-        else:
-            return self._arg1
+        return self._arg1.arg1 if isinstance(self._arg1, MyChainClass) else self._arg1
 
     @property
     def arg2(self):
-        if isinstance(self._arg2, MyChainClass):
-            return self._arg2.arg2
-        else:
-            return self._arg2
+        return self._arg2.arg2 if isinstance(self._arg2, MyChainClass) else self._arg2
 
     @property
     def arg3(self):
-        if isinstance(self._arg3, MyChainClass):
-            return self._arg3.arg3
-        else:
-            return self._arg3
+        return self._arg3.arg3 if isinstance(self._arg3, MyChainClass) else self._arg3
 
     @arg3.setter
     def arg3(self, val):
@@ -90,10 +81,7 @@ class MyChainClass(MyTestClass):
 
     @property
     def arg4(self):
-        if isinstance(self._arg4, MyChainClass):
-            return self._arg4.arg4
-        else:
-            return self._arg4
+        return self._arg4.arg4 if isinstance(self._arg4, MyChainClass) else self._arg4
 
     @arg4.setter
     def arg4(self, val):

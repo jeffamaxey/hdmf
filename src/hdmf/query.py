@@ -27,9 +27,9 @@ class Query(metaclass=ExtenderMeta):
             raise TypeError("'__operations__' must be of type tuple")
         # add any new operations
         if len(bases) and 'Query' in globals() and issubclass(bases[-1], Query) \
-                and bases[-1].__operations__ is not cls.__operations__:
+                    and bases[-1].__operations__ is not cls.__operations__:
             new_operations = list(cls.__operations__)
-            new_operations[0:0] = bases[-1].__operations__
+            new_operations[:0] = bases[-1].__operations__
             cls.__operations__ = tuple(new_operations)
         for op in cls.__operations__:
             if not hasattr(cls, op):
@@ -44,8 +44,7 @@ class Query(metaclass=ExtenderMeta):
 
     @docval({'name': 'expand', 'type': bool, 'help': 'whether or not to expand result', 'default': True})
     def evaluate(self, **kwargs):
-        expand = getargs('expand', kwargs)
-        if expand:
+        if expand := getargs('expand', kwargs):
             if self.expanded is None:
                 self.expanded = self.__evalhelper()
             return self.expanded
@@ -69,7 +68,7 @@ class Query(metaclass=ExtenderMeta):
         if isinstance(result, slice):
             return (result.start, result.stop)
         elif isinstance(result, list):
-            ret = list()
+            ret = []
             for idx in result:
                 if isinstance(idx, slice) and (idx.step is None or idx.step == 1):
                     ret.append((idx.start, idx.stop))
@@ -117,9 +116,9 @@ class HDMFDataset(metaclass=ExtenderMeta):
             raise TypeError("'__operations__' must be of type tuple")
         # add any new operations
         if len(bases) and 'Query' in globals() and issubclass(bases[-1], Query) \
-                and bases[-1].__operations__ is not cls.__operations__:
+                    and bases[-1].__operations__ is not cls.__operations__:
             new_operations = list(cls.__operations__)
-            new_operations[0:0] = bases[-1].__operations__
+            new_operations[:0] = bases[-1].__operations__
             cls.__operations__ = tuple(new_operations)
         for op in cls.__operations__:
             setattr(cls, op, cls.__build_operation(op))
@@ -129,10 +128,7 @@ class HDMFDataset(metaclass=ExtenderMeta):
             return key
         if isinstance(key, (tuple, list, np.ndarray)):
             return list(map(self.__evaluate_key, key))
-        else:
-            if isinstance(key, Query):
-                return key.evaluate()
-            return key
+        return key.evaluate() if isinstance(key, Query) else key
 
     def __getitem__(self, key):
         idx = self.__evaluate_key(key)

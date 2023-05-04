@@ -26,7 +26,7 @@ class Proxy:
         self.__namespace = namespace
         self.__data_type = data_type
         self.__manager = manager
-        self.__candidates = list()
+        self.__candidates = []
 
     @property
     def source(self):
@@ -64,7 +64,7 @@ class Proxy:
         for candidate in self.__candidates:
             if self.matches(candidate):
                 return candidate
-        raise ValueError("No matching candidate Container found for " + self)
+        raise ValueError(f"No matching candidate Container found for {self}")
 
     def __eq__(self, other):
         return self.data_type == other.data_type and \
@@ -73,9 +73,10 @@ class Proxy:
                self.source == other.source
 
     def __repr__(self):
-        ret = dict()
-        for key in ('source', 'location', 'namespace', 'data_type'):
-            ret[key] = getattr(self, key, None)
+        ret = {
+            key: getattr(self, key, None)
+            for key in ('source', 'location', 'namespace', 'data_type')
+        }
         return str(ret)
 
 
@@ -85,9 +86,11 @@ class BuildManager:
     """
 
     def __init__(self, type_map):
-        self.logger = logging.getLogger('%s.%s' % (self.__class__.__module__, self.__class__.__qualname__))
-        self.__builders = dict()
-        self.__containers = dict()
+        self.logger = logging.getLogger(
+            f'{self.__class__.__module__}.{self.__class__.__qualname__}'
+        )
+        self.__builders = {}
+        self.__containers = {}
         self.__active_builders = set()
         self.__type_map = type_map
         self.__ref_queue = deque()  # a queue of the ReferenceBuilders that need to be added
@@ -114,7 +117,7 @@ class BuildManager:
     def _get_proxy_builder(self, builder):
         dt = self.__type_map.get_builder_dt(builder)
         ns = self.__type_map.get_builder_ns(builder)
-        stack = list()
+        stack = []
         tmp = builder
         while tmp is not None:
             stack.append(tmp.name)
@@ -124,7 +127,7 @@ class BuildManager:
 
     def _get_proxy_container(self, container):
         ns, dt = self.__type_map.get_container_ns_dt(container)
-        stack = list()
+        stack = []
         tmp = container
         while tmp is not None:
             if isinstance(tmp, Proxy):
@@ -153,37 +156,40 @@ class BuildManager:
         if root:
             self.__active_builders.clear()  # reset active builders at start of build process
         if result is None:
-            self.logger.debug("Building new %s '%s' (container_source: %s, source: %s, extended spec: %s, export: %s)"
-                              % (container.__class__.__name__, container.name, repr(container.container_source),
-                                 repr(source), spec_ext is not None, export))
+            self.logger.debug(
+                f"Building new {container.__class__.__name__} '{container.name}' (container_source: {repr(container.container_source)}, source: {repr(source)}, extended spec: {spec_ext is not None}, export: {export})"
+            )
             # the container_source is not set or checked when exporting
             if not export:
                 if container.container_source is None:
                     container.container_source = source
                 elif source is None:
                     source = container.container_source
-                else:
-                    if container.container_source != source:
-                        raise ValueError("Cannot change container_source once set: '%s' %s.%s"
-                                         % (container.name, container.__class__.__module__,
-                                            container.__class__.__name__))
+                elif container.container_source != source:
+                    raise ValueError(
+                        f"Cannot change container_source once set: '{container.name}' {container.__class__.__module__}.{container.__class__.__name__}"
+                    )
             # NOTE: if exporting, then existing cached builder will be ignored and overridden with new build result
             result = self.__type_map.build(container, self, source=source, spec_ext=spec_ext, export=export)
             self.prebuilt(container, result)
             self.__active_prebuilt(result)
-            self.logger.debug("Done building %s '%s'" % (container.__class__.__name__, container.name))
+            self.logger.debug(
+                f"Done building {container.__class__.__name__} '{container.name}'"
+            )
         elif not self.__is_active_builder(result) and container.modified:
             # if builder was built on file read and is then modified (append mode), it needs to be rebuilt
-            self.logger.debug("Rebuilding modified %s '%s' (source: %s, extended spec: %s)"
-                              % (container.__class__.__name__, container.name,
-                                 repr(source), spec_ext is not None))
+            self.logger.debug(
+                f"Rebuilding modified {container.__class__.__name__} '{container.name}' (source: {repr(source)}, extended spec: {spec_ext is not None})"
+            )
             result = self.__type_map.build(container, self, builder=result, source=source, spec_ext=spec_ext,
                                            export=export)
-            self.logger.debug("Done rebuilding %s '%s'" % (container.__class__.__name__, container.name))
+            self.logger.debug(
+                f"Done rebuilding {container.__class__.__name__} '{container.name}'"
+            )
         else:
-            self.logger.debug("Using prebuilt %s '%s' for %s '%s'"
-                              % (result.__class__.__name__, result.name,
-                                 container.__class__.__name__, container.name))
+            self.logger.debug(
+                f"Using prebuilt {result.__class__.__name__} '{result.name}' for {container.__class__.__name__} '{container.name}'"
+            )
         if root:  # create reference builders only after building all other builders
             self.__add_refs()
             self.__active_builders.clear()  # reset active builders now that build process has completed
@@ -246,9 +252,9 @@ class BuildManager:
                 container_id = self.__conthash__(container)
                 builder = self.__builders.get(container_id)
                 builder_id = self.__bldrhash__(builder)
-                self.logger.debug("Purging %s '%s' for %s '%s' from prebuilt cache"
-                                  % (builder.__class__.__name__, builder.name,
-                                     container.__class__.__name__, container.name))
+                self.logger.debug(
+                    f"Purging {builder.__class__.__name__} '{builder.name}' for {container.__class__.__name__} '{container.name}' from prebuilt cache"
+                )
                 self.__builders.pop(container_id)
                 self.__containers.pop(builder_id)
 
@@ -257,8 +263,7 @@ class BuildManager:
         """Return the prebuilt builder for the given container or None if it does not exist."""
         container = getargs('container', kwargs)
         container_id = self.__conthash__(container)
-        result = self.__builders.get(container_id)
-        return result
+        return self.__builders.get(container_id)
 
     @docval({'name': 'builder', 'type': (DatasetBuilder, GroupBuilder),
              'doc': 'the builder to construct the AbstractContainer from'})
@@ -285,12 +290,11 @@ class BuildManager:
 
     def __resolve_parents(self, container):
         stack = [container]
-        while len(stack) > 0:
+        while stack:
             tmp = stack.pop()
             if isinstance(tmp.parent, Proxy):
                 tmp.parent = tmp.parent.resolve()
-            for child in tmp.children:
-                stack.append(child)
+            stack.extend(iter(tmp.children))
 
     def __get_parent_dt_builder(self, builder):
         '''
@@ -400,10 +404,10 @@ class TypeMap:
             from .objectmapper import ObjectMapper  # avoid circular import
             mapper_cls = ObjectMapper
         self.__ns_catalog = namespaces
-        self.__mappers = dict()  # already constructed ObjectMapper classes
-        self.__mapper_cls = dict()  # the ObjectMapper class to use for each container type
+        self.__mappers = {}
+        self.__mapper_cls = {}
         self.__container_types = OrderedDict()
-        self.__data_types = dict()
+        self.__data_types = {}
         self.__default_mapper_cls = mapper_cls
         self.__class_generator = ClassGenerator()
         self.register_generator(CustomClassGenerator)
@@ -562,9 +566,11 @@ class TypeMap:
             elif isinstance(spec, DatasetSpec):
                 parent_cls = Data
             else:
-                raise ValueError("Cannot generate class from %s" % type(spec))
+                raise ValueError(f"Cannot generate class from {type(spec)}")
         if type(parent_cls) is not ExtenderMeta:
-            raise ValueError("parent class %s is not of type ExtenderMeta - %s" % (parent_cls, type(parent_cls)))
+            raise ValueError(
+                f"parent class {parent_cls} is not of type ExtenderMeta - {type(parent_cls)}"
+            )
         return parent_cls
 
     def __get_container_cls(self, namespace, data_type):
@@ -620,8 +626,7 @@ class TypeMap:
         builder = getargs('builder', kwargs)
         if isinstance(builder, LinkBuilder):
             builder = builder.builder
-        ret = builder.attributes.get('namespace')
-        return ret
+        return builder.attributes.get('namespace')
 
     @docval({'name': 'builder', 'type': Builder,
              'doc': 'the Builder object to get the corresponding AbstractContainer class for'})
@@ -630,10 +635,10 @@ class TypeMap:
         builder = getargs('builder', kwargs)
         data_type = self.get_builder_dt(builder)
         if data_type is None:
-            raise ValueError("No data_type found for builder %s" % builder.path)
+            raise ValueError(f"No data_type found for builder {builder.path}")
         namespace = self.get_builder_ns(builder)
         if namespace is None:
-            raise ValueError("No namespace found for builder %s" % builder.path)
+            raise ValueError(f"No namespace found for builder {builder.path}")
         return self.get_dt_container_cls(data_type, namespace)
 
     @docval({'name': 'spec', 'type': (DatasetSpec, GroupSpec), 'doc': 'the parent spec to search'},
@@ -701,7 +706,7 @@ class TypeMap:
             container_cls = obj.__class__
             namespace, data_type = self.get_container_cls_dt(container_cls)
             if namespace is None:
-                raise ValueError("class %s is not mapped to a data_type" % container_cls)
+                raise ValueError(f"class {container_cls} is not mapped to a data_type")
         else:
             data_type = self.get_builder_dt(obj)
             namespace = self.get_builder_ns(obj)
@@ -727,7 +732,7 @@ class TypeMap:
         ''' Map a container class to a data_type '''
         namespace, data_type, container_cls = getargs('namespace', 'data_type', 'container_cls', kwargs)
         spec = self.__ns_catalog.get_spec(namespace, data_type)  # make sure the spec exists
-        self.__container_types.setdefault(namespace, dict())
+        self.__container_types.setdefault(namespace, {})
         self.__container_types[namespace][data_type] = container_cls
         self.__data_types.setdefault(container_cls, (namespace, data_type))
         if not isinstance(container_cls, TypeSource):
@@ -741,7 +746,9 @@ class TypeMap:
         ''' Map a container class to an ObjectMapper class '''
         container_cls, mapper_cls = getargs('container_cls', 'mapper_cls', kwargs)
         if self.get_container_cls_dt(container_cls) == (None, None):
-            raise ValueError('cannot register map for type %s - no data_type found' % container_cls)
+            raise ValueError(
+                f'cannot register map for type {container_cls} - no data_type found'
+            )
         self.__mapper_cls[container_cls] = mapper_cls
 
     @docval({"name": "container", "type": AbstractContainer, "doc": "the container to convert to a Builder"},
@@ -761,7 +768,9 @@ class TypeMap:
         # get the ObjectMapper to map between Spec objects and AbstractContainer attributes
         obj_mapper = self.get_map(container)
         if obj_mapper is None:
-            raise ValueError('No ObjectMapper found for container of type %s' % str(container.__class__.__name__))
+            raise ValueError(
+                f'No ObjectMapper found for container of type {str(container.__class__.__name__)}'
+            )
 
         # convert the container to a builder using the ObjectMapper
         if manager is None:
@@ -787,11 +796,10 @@ class TypeMap:
         if build_manager is None:
             build_manager = BuildManager(self)
         obj_mapper = self.get_map(builder)
-        if obj_mapper is None:
-            dt = builder.attributes[self.namespace_catalog.group_spec_cls.type_key()]
-            raise ValueError('No ObjectMapper found for builder of type %s' % dt)
-        else:
+        if obj_mapper is not None:
             return obj_mapper.construct(builder, build_manager, parent)
+        dt = builder.attributes[self.namespace_catalog.group_spec_cls.type_key()]
+        raise ValueError(f'No ObjectMapper found for builder of type {dt}')
 
     @docval({"name": "container", "type": AbstractContainer, "doc": "the container to convert to a Builder"},
             returns='The name a Builder should be given when building this container', rtype=str)
@@ -800,6 +808,8 @@ class TypeMap:
         container = getargs('container', kwargs)
         obj_mapper = self.get_map(container)
         if obj_mapper is None:
-            raise ValueError('No ObjectMapper found for container of type %s' % str(container.__class__.__name__))
+            raise ValueError(
+                f'No ObjectMapper found for container of type {str(container.__class__.__name__)}'
+            )
         else:
             return obj_mapper.get_builder_name(container)

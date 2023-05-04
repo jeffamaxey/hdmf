@@ -32,8 +32,7 @@ class TestDynamicTable(TestCase):
 
     def with_table_columns(self):
         cols = [VectorData(**d) for d in self.spec]
-        table = DynamicTable("with_table_columns", 'a test table', columns=cols)
-        return table
+        return DynamicTable("with_table_columns", 'a test table', columns=cols)
 
     def with_columns_and_data(self):
         columns = [
@@ -43,8 +42,7 @@ class TestDynamicTable(TestCase):
         return DynamicTable("with_columns_and_data", 'a test table', columns=columns)
 
     def with_spec(self):
-        table = DynamicTable("with_spec", 'a test table', columns=self.spec)
-        return table
+        return DynamicTable("with_spec", 'a test table', columns=self.spec)
 
     def check_empty_table(self, table):
         self.assertIsInstance(table.columns, tuple)
@@ -124,7 +122,7 @@ class TestDynamicTable(TestCase):
     def test_constructor_colnames_vectorindex(self):
         """Test that passing colnames with a VectorIndex column puts the index in the right location in columns."""
         cols = [VectorData(**d) for d in self.spec]
-        ind = VectorIndex(name='foo_index', data=list(), target=cols[0])
+        ind = VectorIndex(name='foo_index', data=[], target=cols[0])
         cols.append(ind)
         table = DynamicTable("with_columns", 'a test table', columns=cols, colnames=['baz', 'bar', 'foo'])
         self.assertTupleEqual(table.columns, (cols[2], cols[1], ind, cols[0]))
@@ -132,7 +130,7 @@ class TestDynamicTable(TestCase):
     def test_constructor_colnames_vectorindex_rev(self):
         """Test that passing colnames with a VectorIndex column puts the index in the right location in columns."""
         cols = [VectorData(**d) for d in self.spec]
-        ind = VectorIndex(name='foo_index', data=list(), target=cols[0])
+        ind = VectorIndex(name='foo_index', data=[], target=cols[0])
         cols.insert(0, ind)  # put index before its target
         table = DynamicTable("with_columns", 'a test table', columns=cols, colnames=['baz', 'bar', 'foo'])
         self.assertTupleEqual(table.columns, (cols[3], cols[2], ind, cols[1]))
@@ -140,8 +138,8 @@ class TestDynamicTable(TestCase):
     def test_constructor_dup_index(self):
         """Test that passing two indices for the same column raises an error."""
         cols = [VectorData(**d) for d in self.spec]
-        cols.append(VectorIndex(name='foo_index', data=list(), target=cols[0]))
-        cols.append(VectorIndex(name='foo_index2', data=list(), target=cols[0]))
+        cols.append(VectorIndex(name='foo_index', data=[], target=cols[0]))
+        cols.append(VectorIndex(name='foo_index2', data=[], target=cols[0]))
         msg = "'columns' contains index columns with the same target: ['foo', 'foo']"
         with self.assertRaisesWith(ValueError, msg):
             DynamicTable("with_columns", 'a test table', columns=cols)
@@ -150,7 +148,7 @@ class TestDynamicTable(TestCase):
         """Test that passing an index without its target raises an error."""
         cols = [VectorData(**d) for d in self.spec]
         missing_col = cols.pop(2)
-        cols.append(VectorIndex(name='foo_index', data=list(), target=missing_col))
+        cols.append(VectorIndex(name='foo_index', data=[], target=missing_col))
         msg = "Found VectorIndex 'foo_index' but not its target 'baz'"
         with self.assertRaisesWith(ValueError, msg):
             DynamicTable("with_columns", 'a test table', columns=cols)
@@ -205,7 +203,7 @@ class TestDynamicTable(TestCase):
     def test_add_column_vectorindex(self):
         table = self.with_spec()
         table.add_column(name='qux', description='qux column')
-        ind = VectorIndex(name='bar', data=list(), target=table['qux'])
+        ind = VectorIndex(name='bar', data=[], target=table['qux'])
 
         msg = ("Passing a VectorIndex in for index may lead to unexpected behavior. This functionality will be "
                "deprecated in a future version of HDMF.")
@@ -328,7 +326,7 @@ class TestDynamicTable(TestCase):
     def test_getitem_row_slice_with_step(self):
         table = self.with_spec()
         self.add_rows(table)
-        rows = table[0:5:2]
+        rows = table[:5:2]
         self.assertIsInstance(rows, pd.DataFrame)
         self.assertTupleEqual(rows.shape, (3, 3))
         self.assertEqual(rows.iloc[2][0], 5)
@@ -483,7 +481,7 @@ class TestDynamicTable(TestCase):
         try:
             table.add_row(id=10, data={'foo': 1, 'bar': 10.0, 'baz': 'cat'}, enforce_unique_id=False)
         except ValueError as e:
-            self.fail("add row with non unique id raised error %s" % str(e))
+            self.fail(f"add row with non unique id raised error {str(e)}")
 
     def test_bad_id_type_error(self):
         table = self.with_spec()
@@ -502,8 +500,9 @@ class TestDynamicTable(TestCase):
         data = np.array([[1, 1, 1], [2, 2, 2], [3, 3, 3]])
         col = VectorData(name='data', description='desc', data=data)
         df = DynamicTable('test', 'desc', np.arange(3, dtype='int'), (col, )).to_dataframe()
-        df2 = pd.DataFrame({'data': [x for x in data]},
-                           index=pd.Index(name='id', data=[0, 1, 2]))
+        df2 = pd.DataFrame(
+            {'data': list(data)}, index=pd.Index(name='id', data=[0, 1, 2])
+        )
         pd.testing.assert_frame_equal(df, df2)
 
     def test_id_search(self):
@@ -533,7 +532,7 @@ Fields:
   )
   description: a test table
 """
-        expected = expected % id(table)
+        expected %= id(table)
         self.assertEqual(str(table), expected)
 
     def test_add_column_existing_attr(self):
@@ -604,8 +603,7 @@ Fields:
         col = VectorData(name='data', description='desc', data=data)
         table = DynamicTable('test', 'desc', columns=(col, ))
         df = table.to_dataframe()
-        df2 = pd.DataFrame({'data': [x for x in data]},
-                           index=pd.Index(name='id', data=[0]))
+        df2 = pd.DataFrame({'data': list(data)}, index=pd.Index(name='id', data=[0]))
         pd.testing.assert_frame_equal(df, df2)
         pd.testing.assert_frame_equal(table.get(0), df2)
 
@@ -614,8 +612,7 @@ Fields:
         col = VectorData(name='data', description='desc', data=data)
         table = DynamicTable('test', 'desc', columns=(col, ))
         df = table.to_dataframe()
-        df2 = pd.DataFrame({'data': [x for x in data]},
-                           index=pd.Index(name='id', data=[0]))
+        df2 = pd.DataFrame({'data': list(data)}, index=pd.Index(name='id', data=[0]))
         pd.testing.assert_frame_equal(df, df2)
         pd.testing.assert_frame_equal(table.get(0), df2)
 
@@ -702,8 +699,7 @@ class TestEmptyDynamicTableRoundTrip(H5RoundTripMixin, TestCase):
     """Test roundtripping a DynamicTable with no rows and no columns."""
 
     def setUpContainer(self):
-        table = DynamicTable('table0', 'an example table')
-        return table
+        return DynamicTable('table0', 'an example table')
 
 
 class TestDynamicTableRegion(TestCase):
@@ -834,7 +830,7 @@ class TestDynamicTableRegion(TestCase):
         expected = """dtr hdmf.common.table.DynamicTableRegion at 0x%d
     Target table: with_columns_and_data hdmf.common.table.DynamicTable at 0x%d
 """
-        expected = expected % (id(dynamic_table_region), id(table))
+        expected %= (id(dynamic_table_region), id(table))
         self.assertEqual(str(dynamic_table_region), expected)
 
     def test_no_df_nested(self):
@@ -889,8 +885,7 @@ class DynamicTableRegionRoundTrip(H5RoundTripMixin, TestCase):
         super().setUp()
 
     def setUpContainer(self):
-        multi_container = SimpleMultiContainer('multi', [self.table, self.target_table])
-        return multi_container
+        return SimpleMultiContainer('multi', [self.table, self.target_table])
 
     def _get(self, arg):
         mc = self.roundtripContainer()
@@ -1332,7 +1327,7 @@ class TestDynamicTableClassColumns(TestCase):
     def test_init_columns_add_req_column_mismatch_index(self):
         """Test that passing a required column that does not match the predefined column specs raises an error."""
         col1 = VectorData(name='col1', description='column #1')  # override __columns__ description
-        col1_ind = VectorIndex(name='col1_index', data=list(), target=col1)
+        col1_ind = VectorIndex(name='col1_index', data=[], target=col1)
 
         # TODO raise an error
         SubTable(name='subtable', description='subtable description', columns=[col1_ind, col1])
@@ -1340,7 +1335,9 @@ class TestDynamicTableClassColumns(TestCase):
     def test_init_columns_add_req_column_mismatch_table(self):
         """Test that passing a required column that does not match the predefined column specs raises an error."""
         dummy_table = DynamicTable(name='dummy', description='dummy table')
-        col1 = DynamicTableRegion(name='col1', data=list(), description='column #1', table=dummy_table)
+        col1 = DynamicTableRegion(
+            name='col1', data=[], description='column #1', table=dummy_table
+        )
 
         # TODO raise an error
         SubTable(name='subtable', description='subtable description', columns=[col1])
@@ -1355,7 +1352,7 @@ class TestDynamicTableClassColumns(TestCase):
     def test_init_columns_add_dup_column(self):
         """Test that passing two columns with the same name raises an error."""
         col1 = VectorData(name='col1', description='column #1')  # override __columns__ description
-        col1_ind = VectorIndex(name='col1', data=list(), target=col1)
+        col1_ind = VectorIndex(name='col1', data=[], target=col1)
 
         msg = "'columns' contains columns with duplicate names: ['col1', 'col1']"
         with self.assertRaisesWith(ValueError, msg):
@@ -1431,7 +1428,7 @@ class TestIndexedEnumData(TestCase):
 
     def test_add_row(self):
         ed = EnumData('cv_data', 'a test EnumData', elements=['a', 'b', 'c'])
-        idx = VectorIndex('enum_index', list(), target=ed)
+        idx = VectorIndex('enum_index', [], target=ed)
         idx.add_row(['a', 'a', 'a'])
         idx.add_row(['b', 'b'])
         idx.add_row(['c', 'c', 'c', 'c'])
@@ -1441,7 +1438,7 @@ class TestIndexedEnumData(TestCase):
 
     def test_add_row_index(self):
         ed = EnumData('cv_data', 'a test EnumData', elements=['a', 'b', 'c'])
-        idx = VectorIndex('enum_index', list(), target=ed)
+        idx = VectorIndex('enum_index', [], target=ed)
         idx.add_row([0, 0, 0], index=True)
         idx.add_row([1, 1], index=True)
         idx.add_row([2, 2, 2, 2], index=True)
@@ -1452,7 +1449,7 @@ class TestIndexedEnumData(TestCase):
     @unittest.skip("feature is not yet supported")
     def test_add_2d_row_index(self):
         ed = EnumData('cv_data', 'a test EnumData', elements=['a', 'b', 'c'])
-        idx = VectorIndex('enum_index', list(), target=ed)
+        idx = VectorIndex('enum_index', [], target=ed)
         idx.add_row([['a', 'a'], ['a', 'a'], ['a', 'a']])
         idx.add_row([['b', 'b'], ['b', 'b']])
         idx.add_row([['c', 'c'], ['c', 'c'], ['c', 'c'], ['c', 'c']])
@@ -1735,7 +1732,7 @@ class SelectionTestMixin:
         self._check_one_row_no_df(rec)
 
     def test_slice(self):
-        rec = self.table1[0:2]
+        rec = self.table1[:2]
         self._check_two_rows_df(rec)
 
     def test_slice_nested(self):
@@ -1747,7 +1744,7 @@ class SelectionTestMixin:
         self._check_two_rows_no_df(rec)
 
     def test_slice_single(self):
-        rec = self.table1[0:1]
+        rec = self.table1[:1]
         self._check_one_row_df(rec)
 
     def test_slice_single_nested(self):
@@ -1849,7 +1846,7 @@ class TestSelectionH5Dataset(SelectionTestMixin, TestCase):
 
     def _wrap(self, my_list):
         self.dset_counter = self.dset_counter + 1
-        kwargs = dict()
+        kwargs = {}
         if isinstance(my_list[0], str):
             kwargs['dtype'] = H5_TEXT
         elif isinstance(my_list[0], tuple):  # compound dtype
@@ -1866,7 +1863,7 @@ class TestSelectionH5Dataset(SelectionTestMixin, TestCase):
 
     def _wrap_check(self, my_list):
         # getitem on h5dataset backed data will return np.array
-        kwargs = dict()
+        kwargs = {}
         if isinstance(my_list[0], str):
             kwargs['dtype'] = H5_TEXT
         elif isinstance(my_list[0], tuple):
@@ -1881,11 +1878,11 @@ class TestVectorIndex(TestCase):
 
     def test_init_empty(self):
         foo = VectorData(name='foo', description='foo column')
-        foo_ind = VectorIndex(name='foo_index', target=foo, data=list())
+        foo_ind = VectorIndex(name='foo_index', target=foo, data=[])
         self.assertEqual(foo_ind.name, 'foo_index')
         self.assertEqual(foo_ind.description, "Index for VectorData 'foo'")
         self.assertIs(foo_ind.target, foo)
-        self.assertListEqual(foo_ind.data, list())
+        self.assertListEqual(foo_ind.data, [])
 
     def test_init_data(self):
         foo = VectorData(name='foo', description='foo column', data=['a', 'b', 'c'])
@@ -2048,10 +2045,7 @@ class TestDynamicTableInitIndexRoundTrip(H5RoundTripMixin, TestCase):
         foo = VectorData(name='foo', description='foo column', data=['a', 'b', 'c'])
         foo_ind = VectorIndex(name='foo_index', target=foo, data=[2, 3])
 
-        # NOTE: on construct, columns are ordered such that indices go before data, so create the table that way
-        # for proper comparison of the columns list
-        table = DynamicTable('table0', 'an example table', columns=[foo_ind, foo])
-        return table
+        return DynamicTable('table0', 'an example table', columns=[foo_ind, foo])
 
 
 class TestDoubleIndexRoundtrip(H5RoundTripMixin, TestCase):
@@ -2061,19 +2055,14 @@ class TestDoubleIndexRoundtrip(H5RoundTripMixin, TestCase):
         foo_ind = VectorIndex(name='foo_index', target=foo, data=[2, 3, 4])
         foo_ind_ind = VectorIndex(name='foo_index_index', target=foo_ind, data=[2, 3])
 
-        # NOTE: on construct, columns are ordered such that indices go before data, so create the table that way
-        # for proper comparison of the columns list
-        table = DynamicTable('table0', 'an example table', columns=[foo_ind_ind, foo_ind, foo])
-        return table
+        return DynamicTable(
+            'table0', 'an example table', columns=[foo_ind_ind, foo_ind, foo]
+        )
 
 
 class TestDataIOColumns(H5RoundTripMixin, TestCase):
     def setUpContainer(self):
-        self.chunked_data = H5DataIO(
-            data=[i for i in range(10)],
-            chunks=(3,),
-            fillvalue=-1,
-        )
+        self.chunked_data = H5DataIO(data=list(range(10)), chunks=(3,), fillvalue=-1)
         self.compressed_data = H5DataIO(
             data=np.arange(10),
             compression=1,
@@ -2285,13 +2274,11 @@ class TestVectorIndexDtype(TestCase):
 
     def set_up_array_index(self):
         data = VectorData(name='data', description='desc')
-        index = VectorIndex(name='index', data=np.array([]), target=data)
-        return index
+        return VectorIndex(name='index', data=np.array([]), target=data)
 
     def set_up_list_index(self):
         data = VectorData(name='data', description='desc')
-        index = VectorIndex(name='index', data=[], target=data)
-        return index
+        return VectorIndex(name='index', data=[], target=data)
 
     def test_array_inc_precision(self):
         index = self.set_up_array_index()

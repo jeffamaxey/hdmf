@@ -26,7 +26,9 @@ class ClassGenerator:
         """
         generator = getargs('generator', kwargs)
         if not issubclass(generator, CustomClassGenerator):
-            raise ValueError('Generator %s must be a subclass of CustomClassGenerator.' % generator)
+            raise ValueError(
+                f'Generator {generator} must be a subclass of CustomClassGenerator.'
+            )
         if generator in self.__custom_generators:
             self.__custom_generators.remove(generator)
         self.__custom_generators.insert(0, generator)
@@ -45,7 +47,7 @@ class ClassGenerator:
         data_type, spec, parent_cls, attr_names, type_map = getargs('data_type', 'spec', 'parent_cls', 'attr_names',
                                                                     'type_map', kwargs)
 
-        not_inherited_fields = dict()
+        not_inherited_fields = {}
         for k, field_spec in attr_names.items():
             if k == 'help':  # pragma: no cover
                 # (legacy) do not add field named 'help' to any part of class object
@@ -55,7 +57,7 @@ class ClassGenerator:
             if not spec.is_inherited_spec(field_spec):
                 not_inherited_fields[k] = field_spec
         try:
-            classdict = dict()
+            classdict = {}
             bases = [parent_cls]
             docval_args = list(deepcopy(get_docval(parent_cls.__init__)))
             for attr_name, field_spec in not_inherited_fields.items():
@@ -78,11 +80,11 @@ class ClassGenerator:
             name = spec.data_type_def
             if name is None:
                 name = 'Unknown'
-            raise ValueError("Cannot dynamically generate class for type '%s'. " % name
-                             + str(e)
-                             + " Please define that type before defining '%s'." % name)
-        cls = ExtenderMeta(data_type, tuple(bases), classdict)
-        return cls
+            raise ValueError(
+                f"Cannot dynamically generate class for type '{name}'. {str(e)}"
+                + f" Please define that type before defining '{name}'."
+            )
+        return ExtenderMeta(data_type, tuple(bases), classdict)
 
 
 class TypeDoesNotExistError(Exception):  # pragma: no cover
@@ -93,7 +95,7 @@ class CustomClassGenerator:
     """Subclass this class and register an instance to alter how classes are auto-generated."""
 
     def __new__(cls, *args, **kwargs):  # pragma: no cover
-        raise TypeError('Cannot instantiate class %s' % cls.__name__)
+        raise TypeError(f'Cannot instantiate class {cls.__name__}')
 
     # mapping from spec types to allowable python types for docval for fields during dynamic class generation
     # e.g., if a dataset/attribute spec has dtype int32, then get_class should generate a docval for the class'
@@ -139,7 +141,9 @@ class CustomClassGenerator:
         if dtype is None:  # pragma: no cover
             # this should not happen as long as _spec_dtype_map is kept up to date with
             # hdmf.spec.spec.DtypeHelper.valid_primary_dtypes
-            raise ValueError("Spec dtype '%s' cannot be mapped to a Python type." % spec_dtype)
+            raise ValueError(
+                f"Spec dtype '{spec_dtype}' cannot be mapped to a Python type."
+            )
         return dtype
 
     @classmethod
@@ -150,7 +154,7 @@ class CustomClassGenerator:
         container_type = type_map.get_dt_container_cls(type_name)
         if container_type is None:  # pragma: no cover
             # this should never happen after hdmf#322
-            raise TypeDoesNotExistError("Type '%s' does not exist." % type_name)
+            raise TypeDoesNotExistError(f"Type '{type_name}' does not exist.")
         return container_type
 
     @classmethod
@@ -163,8 +167,7 @@ class CustomClassGenerator:
         if isinstance(spec, AttributeSpec):
             if isinstance(spec.dtype, RefSpec):
                 try:
-                    container_type = cls._get_container_type(spec.dtype.target_type, type_map)
-                    return container_type
+                    return cls._get_container_type(spec.dtype.target_type, type_map)
                 except TypeDoesNotExistError:
                     # TODO what happens when the attribute ref target is not (or not yet) mapped to a container class?
                     # returning Data, Container works as a generic fallback for now but should be more specific
@@ -224,7 +227,7 @@ class CustomClassGenerator:
             fields_conf['child'] = True
         # if getattr(field_spec, 'value', None) is not None:  # TODO set the fixed value on the class?
         #     fields_conf['settable'] = False
-        classdict.setdefault(parent_cls._fieldsname, list()).append(fields_conf)
+        classdict.setdefault(parent_cls._fieldsname, []).append(fields_conf)
 
         docval_arg = dict(
             name=attr_name,
@@ -287,8 +290,8 @@ class CustomClassGenerator:
     def set_init(cls, classdict, bases, docval_args, not_inherited_fields, name):
         # get docval arg names from superclass
         base = bases[0]
-        parent_docval_args = set(arg['name'] for arg in get_docval(base.__init__))
-        new_args = list()
+        parent_docval_args = {arg['name'] for arg in get_docval(base.__init__)}
+        new_args = []
         for attr_name, field_spec in not_inherited_fields.items():
             # auto-initialize arguments not found in superclass
             if attr_name not in parent_docval_args:
@@ -304,6 +307,7 @@ class CustomClassGenerator:
             for f in new_args:
                 arg_val = kwargs.get(f, None)
                 setattr(self, f, arg_val)
+
         classdict['__init__'] = __init__
 
 
@@ -329,11 +333,11 @@ class MCIClassGenerator(CustomClassGenerator):
         field_clsconf = dict(
             attr=attr_name,
             type=cls._get_type(field_spec, type_map),
-            add='add_{}'.format(attr_name),
-            get='get_{}'.format(attr_name),
-            create='create_{}'.format(attr_name)
+            add=f'add_{attr_name}',
+            get=f'get_{attr_name}',
+            create=f'create_{attr_name}',
         )
-        classdict.setdefault('__clsconf__', list()).append(field_clsconf)
+        classdict.setdefault('__clsconf__', []).append(field_clsconf)
 
         # add a specialized docval arg for __init__
         docval_arg = dict(

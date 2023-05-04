@@ -75,9 +75,12 @@ def __get_resources():
     from os.path import join
     __core_ns_file_name = 'namespace.yaml'
 
-    ret = dict()
-    ret['namespace_path'] = join(resource_filename(__name__, 'hdmf-common-schema/common'), __core_ns_file_name)
-    return ret
+    return {
+        'namespace_path': join(
+            resource_filename(__name__, 'hdmf-common-schema/common'),
+            __core_ns_file_name,
+        )
+    }
 
 
 def _get_resources():
@@ -194,31 +197,30 @@ def get_hdf5io(**kwargs):
 
 # load the hdmf-common namespace
 __resources = __get_resources()
-if os.path.exists(__resources['namespace_path']):
-    __TYPE_MAP = TypeMap(NamespaceCatalog())
-
-    load_namespaces(__resources['namespace_path'])
-
-    # import these so the TypeMap gets populated
-    from . import io as __io  # noqa: F401,E402
-
-    from . import table  # noqa: F401,E402
-    from . import alignedtable  # noqa: F401,E402
-    from . import sparse  # noqa: F401,E402
-    from . import resources  # noqa: F401,E402
-    from . import multi  # noqa: F401,E402
-
-    # register custom class generators
-    from .io.table import DynamicTableGenerator
-    __TYPE_MAP.register_generator(DynamicTableGenerator)
-
-    from .. import Data, Container
-    __TYPE_MAP.register_container_type(CORE_NAMESPACE, 'Container', Container)
-    __TYPE_MAP.register_container_type(CORE_NAMESPACE, 'Data', Data)
-
-else:
+if not os.path.exists(__resources['namespace_path']):
     raise RuntimeError("Unable to load a TypeMap - no namespace file found")
 
+
+__TYPE_MAP = TypeMap(NamespaceCatalog())
+
+load_namespaces(__resources['namespace_path'])
+
+# import these so the TypeMap gets populated
+from . import io as __io  # noqa: F401,E402
+
+from . import table  # noqa: F401,E402
+from . import alignedtable  # noqa: F401,E402
+from . import sparse  # noqa: F401,E402
+from . import resources  # noqa: F401,E402
+from . import multi  # noqa: F401,E402
+
+# register custom class generators
+from .io.table import DynamicTableGenerator
+__TYPE_MAP.register_generator(DynamicTableGenerator)
+
+from .. import Data, Container
+__TYPE_MAP.register_container_type(CORE_NAMESPACE, 'Container', Container)
+__TYPE_MAP.register_container_type(CORE_NAMESPACE, 'Data', Data)
 
 DynamicTable = get_class('DynamicTable', CORE_NAMESPACE)
 VectorData = get_class('VectorData', CORE_NAMESPACE)

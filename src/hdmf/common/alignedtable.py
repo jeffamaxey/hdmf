@@ -52,10 +52,12 @@ class AlignedDynamicTable(DynamicTable):
         if in_categories is not None and in_category_tables is None:
             raise ValueError("Categories provided but no category_tables given")
         # at this point both in_categories and in_category_tables should either both be None or both be a list
-        if in_categories is not None:
-            if len(in_categories) != len(in_category_tables):
-                raise ValueError("%s category_tables given but %s categories specified" %
-                                 (len(in_category_tables), len(in_categories)))
+        if in_categories is not None and len(in_categories) != len(
+            in_category_tables
+        ):
+            raise ValueError(
+                f"{len(in_category_tables)} category_tables given but {len(in_categories)} categories specified"
+            )
         # Initialize the main dynamic table
         call_docval_func(super().__init__, kwargs)
         # Create and set all sub-categories
@@ -63,12 +65,10 @@ class AlignedDynamicTable(DynamicTable):
         # Add the custom categories given as inputs
         if in_category_tables is not None:
             # We may need to resize our main table when adding categories as the user may not have set ids
-            if len(in_category_tables) > 0:
-                # We have categories to process
-                if len(self.id) == 0:
-                    # The user did not initialize our main table id's nor set columns for our main table
-                    for i in range(len(in_category_tables[0])):
-                        self.id.append(i)
+            if len(in_category_tables) > 0 and len(self.id) == 0:
+                # The user did not initialize our main table id's nor set columns for our main table
+                for i in range(len(in_category_tables[0])):
+                    self.id.append(i)
             # Add the user-provided categories in the correct order as described by the categories
             # This is necessary, because we do not store the categories explicitly but we maintain them
             # as the order of our self.category_tables. In this makes sure look-ups are consistent.
@@ -76,10 +76,14 @@ class AlignedDynamicTable(DynamicTable):
             for i, v in enumerate(in_category_tables):
                 # Error check that the name of the table is in our categories list
                 if v.name not in lookup_index:
-                    raise ValueError("DynamicTable %s does not appear in categories %s" % (v.name, str(in_categories)))
+                    raise ValueError(
+                        f"DynamicTable {v.name} does not appear in categories {str(in_categories)}"
+                    )
                 # Error check to make sure no two tables with the same name are given
                 if lookup_index[v.name] >= 0:
-                    raise ValueError("Duplicate table name %s found in input dynamic_tables" % v.name)
+                    raise ValueError(
+                        f"Duplicate table name {v.name} found in input dynamic_tables"
+                    )
                 lookup_index[v.name] = i
             for table_name, tabel_index in lookup_index.items():
                 # This error case should not be able to occur since the length of the in_categories and
@@ -87,8 +91,9 @@ class AlignedDynamicTable(DynamicTable):
                 # name in the in_categories list. We, therefore, exclude this check from coverage testing
                 # but we leave it in just as a backup trigger in case something unexpected happens
                 if tabel_index < 0:  # pragma: no cover
-                    raise ValueError("DynamicTable %s listed in categories but does not appear in category_tables" %
-                                     table_name)  # pragma: no cover
+                    raise ValueError(
+                        f"DynamicTable {table_name} listed in categories but does not appear in category_tables"
+                    )
                 # Test that all category tables have the correct number of rows
                 category = in_category_tables[tabel_index]
                 if len(category) != len(self):
@@ -143,7 +148,7 @@ class AlignedDynamicTable(DynamicTable):
             raise ValueError('New category DynamicTable does not align, it has %i rows expected %i' %
                              (len(category), len(self)))
         if category.name in self.category_tables:
-            raise ValueError("Category %s already in the table" % category.name)
+            raise ValueError(f"Category {category.name} already in the table")
         if isinstance(category, AlignedDynamicTable):
             raise ValueError("Category is an AlignedDynamicTable. Nesting of AlignedDynamicTable "
                              "is currently not supported.")
@@ -177,7 +182,7 @@ class AlignedDynamicTable(DynamicTable):
             try:
                 category = self.get_category(category_name)
             except KeyError:
-                raise KeyError("Category %s not in table" % category_name)
+                raise KeyError(f"Category {category_name} not in table")
             category.add_column(**kwargs)
 
     @docval({'name': 'data', 'type': dict, 'doc': 'the data to put in this row', 'default': None},
@@ -195,14 +200,16 @@ class AlignedDynamicTable(DynamicTable):
         # extract the category data
         category_data = {k: data.pop(k) for k in self.categories if k in data}
 
-        # Check that we have the approbriate categories provided
-        missing_categories = set(self.categories) - set(list(category_data.keys()))
-        if missing_categories:
+        if missing_categories := set(self.categories) - set(
+            list(category_data.keys())
+        ):
             raise KeyError(
-                '\n'.join([
-                    'row data keys do not match available categories',
-                    'missing {} category keys: {}'.format(len(missing_categories), missing_categories)
-                ])
+                '\n'.join(
+                    [
+                        'row data keys do not match available categories',
+                        f'missing {len(missing_categories)} category keys: {missing_categories}',
+                    ]
+                )
             )
         # Add the data to our main dynamic table
         data['id'] = row_id
@@ -226,14 +233,13 @@ class AlignedDynamicTable(DynamicTable):
         """
         if not getargs('include_category_tables', kwargs):
             return self.colnames
-        else:
-            ignore_category_ids = getargs('ignore_category_ids', kwargs)
-            columns = [(self.name, c) for c in self.colnames]
-            for category in self.category_tables.values():
-                if not ignore_category_ids:
-                    columns += [(category.name, 'id'), ]
-                columns += [(category.name, c) for c in category.colnames]
-            return columns
+        ignore_category_ids = getargs('ignore_category_ids', kwargs)
+        columns = [(self.name, c) for c in self.colnames]
+        for category in self.category_tables.values():
+            if not ignore_category_ids:
+                columns += [(category.name, 'id'), ]
+            columns += [(category.name, c) for c in category.colnames]
+        return columns
 
     @docval({'name': 'ignore_category_ids', 'type': bool,
              'doc': "Ignore id columns of sub-category tables", 'default': False})
@@ -321,30 +327,24 @@ class AlignedDynamicTable(DynamicTable):
                 return self.get_category(item).to_dataframe()
         elif isinstance(item, tuple):
             if len(item) == 2:
-                # DynamicTable allows selection of cells via the syntax [int, str], i.e,. [row_index, columnname]
-                # We support this syntax here as well with the additional caveat that in AlignedDynamicTable
-                # columns are identified by tuples of strings. As such [int, str] refers not to a cell but
-                # a single row in a particular category table (i.e., [row_index, category]). To select a cell
-                # the second part of the item then is a tuple of strings, i.e., [row_index, (category, column)]
-                if isinstance(item[0], (int, np.integer)):
-                    # Select a single cell or row of a sub-table based on row-index(item[0])
-                    # and the category (if item[1] is a string) or column (if item[1] is a tuple of (category, column)
-                    re = self[item[0]][item[1]]
-                    # re is a pandas.Series or pandas.Dataframe. If we selected a single cell
-                    # (i.e., item[2] was a tuple defining a particular column) then return the value of the cell
-                    if re.size == 1:
-                        re = re.values[0]
-                        # If we selected a single cell from a ragged column then we need to change the list to a tuple
-                        if isinstance(re, list):
-                            re = tuple(re)
-                    # We selected a row of a whole table (i.e., item[2] identified only the category table,
-                    # but not a particular column).
-                    # Change the result from a pandas.Series to a pandas.DataFrame for consistency with DynamicTable
-                    if isinstance(re, pd.Series):
-                        re = re.to_frame()
-                    return re
-                else:
+                if not isinstance(item[0], (int, np.integer)):
                     return self.get_category(item[0])[item[1]]
+                # Select a single cell or row of a sub-table based on row-index(item[0])
+                # and the category (if item[1] is a string) or column (if item[1] is a tuple of (category, column)
+                re = self[item[0]][item[1]]
+                # re is a pandas.Series or pandas.Dataframe. If we selected a single cell
+                # (i.e., item[2] was a tuple defining a particular column) then return the value of the cell
+                if re.size == 1:
+                    re = re.values[0]
+                    # If we selected a single cell from a ragged column then we need to change the list to a tuple
+                    if isinstance(re, list):
+                        re = tuple(re)
+                # We selected a row of a whole table (i.e., item[2] identified only the category table,
+                # but not a particular column).
+                # Change the result from a pandas.Series to a pandas.DataFrame for consistency with DynamicTable
+                if isinstance(re, pd.Series):
+                    re = re.to_frame()
+                return re
             elif len(item) == 3:
                 if isinstance(item[0], (int, np.integer)):
                     return self.get_category(item[1])[item[2]][item[0]]

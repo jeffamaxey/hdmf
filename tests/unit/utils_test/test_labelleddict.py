@@ -189,7 +189,7 @@ class TestLabelledDict(TestCase):
 
         ret = ld.pop('a')
         self.assertEqual(ret, obj1)
-        self.assertEqual(ld, dict())
+        self.assertEqual(ld, {})
 
     def test_pop_callback(self):
         self.signal = None
@@ -204,7 +204,7 @@ class TestLabelledDict(TestCase):
         ret = ld.pop('a')
         self.assertEqual(ret, obj1)
         self.assertEqual(self.signal, obj1)
-        self.assertEqual(ld, dict())
+        self.assertEqual(ld, {})
 
     def test_popitem_nocallback(self):
         ld = LabelledDict(label='all_objects', key_attr='prop1')
@@ -213,7 +213,7 @@ class TestLabelledDict(TestCase):
 
         ret = ld.popitem()
         self.assertEqual(ret, ('a', obj1))
-        self.assertEqual(ld, dict())
+        self.assertEqual(ld, {})
 
     def test_popitem_callback(self):
         self.signal = None
@@ -228,7 +228,7 @@ class TestLabelledDict(TestCase):
         ret = ld.popitem()
         self.assertEqual(ret, ('a', obj1))
         self.assertEqual(self.signal, obj1)
-        self.assertEqual(ld, dict())
+        self.assertEqual(ld, {})
 
     def test_clear_nocallback(self):
         ld = LabelledDict(label='all_objects', key_attr='prop1')
@@ -237,7 +237,7 @@ class TestLabelledDict(TestCase):
         ld.add(obj1)
         ld.add(obj2)
         ld.clear()
-        self.assertEqual(ld, dict())
+        self.assertEqual(ld, {})
 
     def test_clear_callback(self):
         self.signal = set()
@@ -252,7 +252,7 @@ class TestLabelledDict(TestCase):
         ld.add(obj2)
         ld.clear()
         self.assertSetEqual(self.signal, {obj2, obj1})
-        self.assertEqual(ld, dict())
+        self.assertEqual(ld, {})
 
     def test_delitem_nocallback(self):
         ld = LabelledDict(label='all_objects', key_attr='prop1')
@@ -260,7 +260,7 @@ class TestLabelledDict(TestCase):
         ld.add(obj1)
 
         del ld['a']
-        self.assertEqual(ld, dict())
+        self.assertEqual(ld, {})
 
     def test_delitem_callback(self):
         self.signal = None
@@ -274,7 +274,7 @@ class TestLabelledDict(TestCase):
 
         del ld['a']
         self.assertEqual(self.signal, obj1)
-        self.assertEqual(ld, dict())
+        self.assertEqual(ld, {})
 
     def test_update_callback(self):
         ld = LabelledDict(label='all_objects', key_attr='prop1')

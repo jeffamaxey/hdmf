@@ -171,7 +171,7 @@ class GenericDataChunkIteratorTests(TestCase):
         self.assertEqual(first=test.num_buffers, second=9)
 
     def test_numpy_array_chunk_iterator(self):
-        iterator_options = dict()
+        iterator_options = {}
         self.check_first_data_chunk_call(
             expected_selection=(slice(0, 2000), slice(0, 384)), iterator_options=iterator_options
         )
@@ -181,7 +181,10 @@ class GenericDataChunkIteratorTests(TestCase):
         test_buffer_shape = (1580, 316)
         iterator_options = dict(buffer_shape=test_buffer_shape)
         self.check_first_data_chunk_call(
-            expected_selection=tuple([slice(0, buffer_shape_axis) for buffer_shape_axis in test_buffer_shape]),
+            expected_selection=tuple(
+                slice(0, buffer_shape_axis)
+                for buffer_shape_axis in test_buffer_shape
+            ),
             iterator_options=iterator_options,
         )
         self.check_direct_hdf5_write(iterator_options=iterator_options)
@@ -192,10 +195,8 @@ class GenericDataChunkIteratorTests(TestCase):
         iterator_options = dict(buffer_gb=0.0005)
         self.check_first_data_chunk_call(
             expected_selection=tuple(
-                [
-                    slice(0, buffer_shape_axis)
-                    for buffer_shape_axis in resulting_buffer_shape
-                ]
+                slice(0, buffer_shape_axis)
+                for buffer_shape_axis in resulting_buffer_shape
             ),
             iterator_options=iterator_options,
         )
@@ -203,14 +204,12 @@ class GenericDataChunkIteratorTests(TestCase):
 
         # buffer is larger than total data size; should collapse to maxshape
         resulting_buffer_shape = (2000, 384)
-        for buffer_gb_input_dtype_pass in [2, 2.0]:
+        for _ in [2, 2.0]:
             iterator_options = dict(buffer_gb=2)
             self.check_first_data_chunk_call(
                 expected_selection=tuple(
-                    [
-                        slice(0, buffer_shape_axis)
-                        for buffer_shape_axis in resulting_buffer_shape
-                    ]
+                    slice(0, buffer_shape_axis)
+                    for buffer_shape_axis in resulting_buffer_shape
                 ),
                 iterator_options=iterator_options,
             )
@@ -245,9 +244,7 @@ class GenericDataChunkIteratorTests(TestCase):
             iterator = self.TestNumpyArrayDataChunkIterator(
                 array=self.test_array, display_progress=True, progress_bar_options=dict(file=file, desc=desc)
             )
-            j = 0
-            for buffer in iterator:
-                j += 1  # dummy operation; must be silent for proper updating of bar
+            j = sum(1 for _ in iterator)
         with open(file=out_text_file, mode="r") as file:
             first_line = file.read()
             self.assertIn(member=desc, container=first_line)

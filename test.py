@@ -44,7 +44,7 @@ class SuccessRecordingResult(unittest.TextTestResult):
 
 def run_test_suite(directory, description="", verbose=True):
     global TOTAL, FAILURES, ERRORS
-    logging.info("running %s" % description)
+    logging.info(f"running {description}")
     directory = os.path.join(os.path.dirname(__file__), directory)
     runner = unittest.TextTestRunner(verbosity=verbose, resultclass=SuccessRecordingResult)
     test_result = runner.run(unittest.TestLoader().discover(directory))
@@ -67,22 +67,24 @@ warning_re = re.compile("Parent module '[a-zA-Z0-9]+' not found while handling a
 def run_example_tests():
     global TOTAL, FAILURES, ERRORS
     logging.info('running example tests')
-    examples_scripts = list()
+    examples_scripts = []
     for root, dirs, files in os.walk(os.path.join(os.path.dirname(__file__), "docs", "gallery")):
-        for f in files:
-            if f.endswith(".py"):
-                examples_scripts.append(os.path.join(root, f))
-
+        examples_scripts.extend(
+            os.path.join(root, f) for f in files if f.endswith(".py")
+        )
     TOTAL += len(examples_scripts)
     for script in examples_scripts:
         try:
-            logging.info("Executing %s" % script)
-            ws = list()
+            logging.info(f"Executing {script}")
+            ws = []
             with warnings.catch_warnings(record=True) as tmp:
                 _import_from_file(script)
-                for w in tmp:  # ignore RunTimeWarnings about importing
-                    if isinstance(w.message, RuntimeWarning) and not warning_re.match(str(w.message)):
-                        ws.append(w)
+                ws.extend(
+                    w
+                    for w in tmp
+                    if isinstance(w.message, RuntimeWarning)
+                    and not warning_re.match(str(w.message))
+                )
             for w in ws:
                 warnings.showwarning(w.message, w.category, w.filename, w.lineno, w.line)
         except Exception:
@@ -126,18 +128,18 @@ def main():
     if flags['example'] in args.suites:
         run_example_tests()
 
-    final_message = 'Ran %s tests' % TOTAL
+    final_message = f'Ran {TOTAL} tests'
     exitcode = 0
     if ERRORS > 0 or FAILURES > 0:
         exitcode = 1
-        _list = list()
+        _list = []
         if ERRORS > 0:
             _list.append('errors=%d' % ERRORS)
         if FAILURES > 0:
             _list.append('failures=%d' % FAILURES)
-        final_message = '%s - FAILED (%s)' % (final_message, ','.join(_list))
+        final_message = f"{final_message} - FAILED ({','.join(_list)})"
     else:
-        final_message = '%s - OK' % final_message
+        final_message = f'{final_message} - OK'
 
     logging.info(final_message)
 

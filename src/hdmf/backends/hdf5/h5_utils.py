@@ -32,7 +32,9 @@ class HDF5IODataChunkIteratorQueue(deque):
     1) the dataset to write to and 2) the AbstractDataChunkIterator with the data
     """
     def __init__(self):
-        self.logger = logging.getLogger('%s.%s' % (self.__class__.__module__, self.__class__.__qualname__))
+        self.logger = logging.getLogger(
+            f'{self.__class__.__module__}.{self.__class__.__qualname__}'
+        )
         super().__init__()
 
     @classmethod
@@ -129,9 +131,7 @@ class DatasetOfReferences(H5Dataset, ReferenceResolver, metaclass=ABCMeta):
         if not hasattr(self, '__inverted'):
             cls = self.get_inverse_class()
             docval = get_docval(cls.__init__)
-            kwargs = dict()
-            for arg in docval:
-                kwargs[arg['name']] = getattr(self, arg['name'])
+            kwargs = {arg['name']: getattr(self, arg['name']) for arg in docval}
             self.__inverted = cls(**kwargs)
         return self.__inverted
 
@@ -181,7 +181,7 @@ class AbstractH5TableDataset(DatasetOfReferences):
     def __init__(self, **kwargs):
         types = popargs('types', kwargs)
         call_docval_func(super().__init__, kwargs)
-        self.__refgetters = dict()
+        self.__refgetters = {}
         for i, t in enumerate(types):
             if t is RegionReference:
                 self.__refgetters[i] = self.__get_regref
@@ -193,7 +193,7 @@ class AbstractH5TableDataset(DatasetOfReferences):
                 # store UTF-8 in compound dtypes
                 self.__refgetters[i] = self._get_utf
         self.__types = types
-        tmp = list()
+        tmp = []
         for i in range(len(self.dataset.dtype)):
             sub = self.dataset.dtype[i]
             if sub.metadata:
@@ -246,7 +246,7 @@ class AbstractH5TableDataset(DatasetOfReferences):
         return obj[ref]
 
     def resolve(self, manager):
-        return self[0:len(self)]
+        return self[:]
 
     def __iter__(self):
         for i in range(len(self)):
@@ -362,9 +362,9 @@ class H5SpecWriter(SpecWriter):
 
     def __write(self, d, name):
         data = self.stringify(d)
-        # create spec group if it does not exist. otherwise, do not overwrite existing spec
-        dset = self.__group.create_dataset(name, shape=tuple(), data=data, dtype=self.__str_type)
-        return dset
+        return self.__group.create_dataset(
+            name, shape=tuple(), data=data, dtype=self.__str_type
+        )
 
     def write_spec(self, spec, path):
         return self.__write(spec, path)
@@ -379,7 +379,9 @@ class H5SpecReader(SpecReader):
     @docval({'name': 'group', 'type': Group, 'doc': 'the HDF5 group to read specs from'})
     def __init__(self, **kwargs):
         self.__group = getargs('group', kwargs)
-        super_kwargs = {'source': "%s:%s" % (os.path.abspath(self.__group.file.name), self.__group.name)}
+        super_kwargs = {
+            'source': f"{os.path.abspath(self.__group.file.name)}:{self.__group.name}"
+        }
         call_docval_func(super().__init__, super_kwargs)
         self.__cache = None
 
@@ -391,8 +393,7 @@ class H5SpecReader(SpecReader):
         if isinstance(s, bytes):
             s = s.decode('UTF-8')
 
-        d = json.loads(s)
-        return d
+        return json.loads(s)
 
     def read_spec(self, spec_path):
         return self.__read(spec_path)
@@ -400,8 +401,7 @@ class H5SpecReader(SpecReader):
     def read_namespace(self, ns_path):
         if self.__cache is None:
             self.__cache = self.__read(ns_path)
-        ret = self.__cache['namespaces']
-        return ret
+        return self.__cache['namespaces']
 
 
 class H5RegionSlicer(RegionSlicer):
@@ -479,7 +479,11 @@ class H5DataIO(DataIO):
             )
     def __init__(self, **kwargs):
         # Get the list of I/O options that user has passed in
-        ioarg_names = [name for name in kwargs.keys() if name not in ['data', 'link_data', 'allow_plugin_filters']]
+        ioarg_names = [
+            name
+            for name in kwargs
+            if name not in ['data', 'link_data', 'allow_plugin_filters']
+        ]
         # Remove the ioargs from kwargs
         ioarg_values = [popargs(argname, kwargs) for argname in ioarg_names]
         # Consume link_data parameter
@@ -517,14 +521,16 @@ class H5DataIO(DataIO):
         # Confirm that the compressor is supported by h5py
         if not self.filter_available(self.__iosettings.get('compression', None),
                                      self.__allow_plugin_filters):
-            msg = "%s compression may not be supported by this version of h5py." % str(self.__iosettings['compression'])
+            msg = f"{str(self.__iosettings['compression'])} compression may not be supported by this version of h5py."
             if not self.__allow_plugin_filters:
                 msg += " Set `allow_plugin_filters=True` to enable the use of dynamically-loaded plugin filters."
             raise ValueError(msg)
         # Check possible parameter collisions
         if isinstance(self.data, Dataset):
             for k in self.__iosettings.keys():
-                warnings.warn("%s in H5DataIO will be ignored with H5DataIO.data being an HDF5 dataset" % k)
+                warnings.warn(
+                    f"{k} in H5DataIO will be ignored with H5DataIO.data being an HDF5 dataset"
+                )
 
     def get_io_params(self):
         """
@@ -541,35 +547,36 @@ class H5DataIO(DataIO):
 
         :raises ValueError: If incompatible options are detected
         """
-        if 'compression' in self.__iosettings:
-            if 'compression_opts' in self.__iosettings:
-                if self.__iosettings['compression'] == 'gzip':
-                    if self.__iosettings['compression_opts'] not in range(10):
-                        raise ValueError("GZIP compression_opts setting must be an integer from 0-9, "
-                                         "not " + str(self.__iosettings['compression_opts']))
-                elif self.__iosettings['compression'] == 'lzf':
-                    if self.__iosettings['compression_opts'] is not None:
-                        raise ValueError("LZF compression filter accepts no compression_opts")
-                elif self.__iosettings['compression'] == 'szip':
-                    szip_opts_error = False
-                    # Check that we have a tuple
-                    szip_opts_error |= not isinstance(self.__iosettings['compression_opts'], tuple)
-                    # Check that we have a tuple of the right length and correct settings
-                    if not szip_opts_error:
-                        try:
-                            szmethod, szpix = self.__iosettings['compression_opts']
-                            szip_opts_error |= (szmethod not in ('ec', 'nn'))
-                            szip_opts_error |= (not (0 < szpix <= 32 and szpix % 2 == 0))
-                        except ValueError:  # ValueError is raised if tuple does not have the right length to unpack
-                            szip_opts_error = True
-                    if szip_opts_error:
-                        raise ValueError("SZIP compression filter compression_opts"
-                                         " must be a 2-tuple ('ec'|'nn', even integer 0-32).")
-            # Warn if compressor other than gzip is being used
-            if self.__iosettings['compression'] not in ['gzip', h5py_filters.h5z.FILTER_DEFLATE]:
-                warnings.warn(str(self.__iosettings['compression']) + " compression may not be available "
-                              "on all installations of HDF5. Use of gzip is recommended to ensure portability of "
-                              "the generated HDF5 files.")
+        if 'compression' not in self.__iosettings:
+            return
+        if 'compression_opts' in self.__iosettings:
+            if self.__iosettings['compression'] == 'gzip':
+                if self.__iosettings['compression_opts'] not in range(10):
+                    raise ValueError("GZIP compression_opts setting must be an integer from 0-9, "
+                                     "not " + str(self.__iosettings['compression_opts']))
+            elif self.__iosettings['compression'] == 'lzf':
+                if self.__iosettings['compression_opts'] is not None:
+                    raise ValueError("LZF compression filter accepts no compression_opts")
+            elif self.__iosettings['compression'] == 'szip':
+                szip_opts_error = False
+                # Check that we have a tuple
+                szip_opts_error |= not isinstance(self.__iosettings['compression_opts'], tuple)
+                # Check that we have a tuple of the right length and correct settings
+                if not szip_opts_error:
+                    try:
+                        szmethod, szpix = self.__iosettings['compression_opts']
+                        szip_opts_error |= (szmethod not in ('ec', 'nn'))
+                        szip_opts_error |= (not (0 < szpix <= 32 and szpix % 2 == 0))
+                    except ValueError:  # ValueError is raised if tuple does not have the right length to unpack
+                        szip_opts_error = True
+                if szip_opts_error:
+                    raise ValueError("SZIP compression filter compression_opts"
+                                     " must be a 2-tuple ('ec'|'nn', even integer 0-32).")
+        # Warn if compressor other than gzip is being used
+        if self.__iosettings['compression'] not in ['gzip', h5py_filters.h5z.FILTER_DEFLATE]:
+            warnings.warn(str(self.__iosettings['compression']) + " compression may not be available "
+                          "on all installations of HDF5. Use of gzip is recommended to ensure portability of "
+                          "the generated HDF5 files.")
 
     @staticmethod
     def filter_available(filter, allow_plugin_filters):
@@ -582,19 +589,17 @@ class H5DataIO(DataIO):
         :param allow_plugin_filters: bool indicating whether the given filter can be dynamically loaded
         :return: bool indicating wether the given filter is available
         """
-        if filter is not None:
-            if filter in h5py_filters.encode:
-                return True
-            elif allow_plugin_filters is True:
-                if type(filter) == int:
-                    if h5py_filters.h5z.filter_avail(filter):
-                        filter_info = h5py_filters.h5z.get_filter_info(filter)
-                        if filter_info == (h5py_filters.h5z.FILTER_CONFIG_DECODE_ENABLED +
-                                           h5py_filters.h5z.FILTER_CONFIG_ENCODE_ENABLED):
-                            return True
-            return False
-        else:
+        if filter is None:
             return True
+        if filter in h5py_filters.encode:
+            return True
+        elif allow_plugin_filters is True:
+            if type(filter) == int and h5py_filters.h5z.filter_avail(filter):
+                filter_info = h5py_filters.h5z.get_filter_info(filter)
+                if filter_info == (h5py_filters.h5z.FILTER_CONFIG_DECODE_ENABLED +
+                                   h5py_filters.h5z.FILTER_CONFIG_ENCODE_ENABLED):
+                    return True
+        return False
 
     @property
     def link_data(self):

@@ -15,9 +15,7 @@ class DynamicTableMap(ObjectMapper):
 
     @ObjectMapper.object_attr('colnames')
     def attr_columns(self, container, manager):
-        if all(not col for col in container.columns):
-            return tuple()
-        return container.colnames
+        return container.colnames if any(container.columns) else tuple()
 
     @docval({"name": "spec", "type": Spec, "doc": "the spec to get the attribute value for"},
             {"name": "container", "type": DynamicTable, "doc": "the container to get the attribute value from"},
@@ -37,8 +35,7 @@ class DynamicTableMap(ObjectMapper):
                 if isinstance(attr_value, VectorIndex):
                     attr_value = attr_value.target
                 if attr_value.table is None:
-                    msg = "empty or missing table for DynamicTableRegion '%s' in DynamicTable '%s'" % \
-                          (attr_value.name, container.name)
+                    msg = f"empty or missing table for DynamicTableRegion '{attr_value.name}' in DynamicTable '{container.name}'"
                     raise ValueError(msg)
             elif spec.data_type_inc == 'VectorIndex':
                 attr_value = container[spec.name]
@@ -85,15 +82,15 @@ class DynamicTableGenerator(CustomClassGenerator):
 
         index_counter = 0
         index_name = attr_name
-        while '{}_index'.format(index_name) in not_inherited_fields:  # an index column exists for this column
-            index_name = '{}_index'.format(index_name)
+        while f'{index_name}_index' in not_inherited_fields:  # an index column exists for this column
+            index_name = f'{index_name}_index'
             index_counter += 1
         if index_counter == 1:
             column_conf['index'] = True
         elif index_counter > 1:
             column_conf['index'] = index_counter
 
-        classdict.setdefault('__columns__', list()).append(column_conf)
+        classdict.setdefault('__columns__', []).append(column_conf)
 
         # do not add DynamicTable columns to init docval
 
@@ -144,11 +141,13 @@ class DynamicTableGenerator(CustomClassGenerator):
                                 column_conf = conf
                                 break
                         if column_conf is None:
-                            raise ValueError("'%s' is not the name of a predefined column of table %s."
-                                             % (colname, self))
+                            raise ValueError(
+                                f"'{colname}' is not the name of a predefined column of table {self}."
+                            )
                         if not column_conf.get('table', False):
-                            raise ValueError("Column '%s' must be a DynamicTableRegion to have a target table."
-                                             % colname)
+                            raise ValueError(
+                                f"Column '{colname}' must be a DynamicTableRegion to have a target table."
+                            )
                         self.add_column(name=column_conf['name'],
                                         description=column_conf['description'],
                                         index=column_conf.get('index', False),

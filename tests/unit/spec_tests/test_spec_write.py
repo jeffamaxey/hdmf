@@ -139,7 +139,7 @@ class TestNamespaceBuilder(TestSpec):
 
     def test_missing_version(self):
         """Test that creating a namespace builder without a version raises an error."""
-        msg = "Namespace '%s' missing key 'version'. Please specify a version for the extension." % self.ns_name
+        msg = f"Namespace '{self.ns_name}' missing key 'version'. Please specify a version for the extension."
         with self.assertRaisesWith(ValueError, msg):
             self.ns_builder = NamespaceBuilder(doc="mydoc",
                                                name=self.ns_name,

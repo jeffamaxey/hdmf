@@ -57,7 +57,7 @@ class Foo(Container):
 
     def __str__(self):
         attrs = ('name', 'my_data', 'attr1', 'attr2', 'attr3')
-        return '<' + ','.join('%s=%s' % (a, getattr(self, a)) for a in attrs) + '>'
+        return '<' + ','.join(f'{a}={getattr(self, a)}' for a in attrs) + '>'
 
     @property
     def my_data(self):
@@ -81,8 +81,7 @@ class Foo(Container):
 
 class FooBucket(Container):
 
-    @docval({'name': 'name', 'type': str, 'doc': 'the name of this bucket'},
-            {'name': 'foos', 'type': list, 'doc': 'the Foo objects in this bucket', 'default': list()})
+    @docval({'name': 'name', 'type': str, 'doc': 'the name of this bucket'}, {'name': 'foos', 'type': list, 'doc': 'the Foo objects in this bucket', 'default': []})
     def __init__(self, **kwargs):
         name, foos = getargs('name', 'foos', kwargs)
         super().__init__(name=name)
@@ -94,7 +93,7 @@ class FooBucket(Container):
         return self.name == other.name and self.foos == other.foos
 
     def __str__(self):
-        return 'name=%s, foos=%s' % (self.name, self.foos)
+        return f'name={self.name}, foos={self.foos}'
 
     @property
     def foos(self):
@@ -115,11 +114,7 @@ class FooFile(Container):
 
     ROOT_NAME = 'root'  # For HDF5 and Zarr this is the root. It should be set before use if different for the backend.
 
-    @docval({'name': 'buckets', 'type': list, 'doc': 'the FooBuckets in this file', 'default': list()},
-            {'name': 'foo_link', 'type': Foo, 'doc': 'an optional linked Foo', 'default': None},
-            {'name': 'foofile_data', 'type': 'array_data', 'doc': 'an optional dataset', 'default': None},
-            {'name': 'foo_ref_attr', 'type': Foo, 'doc': 'a reference Foo', 'default': None},
-            )
+    @docval({'name': 'buckets', 'type': list, 'doc': 'the FooBuckets in this file', 'default': []}, {'name': 'foo_link', 'type': Foo, 'doc': 'an optional linked Foo', 'default': None}, {'name': 'foofile_data', 'type': 'array_data', 'doc': 'an optional dataset', 'default': None}, {'name': 'foo_ref_attr', 'type': Foo, 'doc': 'a reference Foo', 'default': None})
     def __init__(self, **kwargs):
         buckets, foo_link, foofile_data, foo_ref_attr = getargs('buckets', 'foo_link', 'foofile_data',
                                                                 'foo_ref_attr', kwargs)
@@ -137,7 +132,7 @@ class FooFile(Container):
                 and self.foofile_data == other.foofile_data)
 
     def __str__(self):
-        return ('buckets=%s, foo_link=%s, foofile_data=%s' % (self.buckets, self.foo_link, self.foofile_data))
+        return f'buckets={self.buckets}, foo_link={self.foo_link}, foofile_data={self.foofile_data}'
 
     @property
     def buckets(self):
@@ -283,8 +278,7 @@ def get_foo_buildmanager():
     type_map.register_map(FooBucket, BucketMapper)
     type_map.register_map(FooFile, FileMapper)
 
-    manager = BuildManager(type_map)
-    return manager
+    return BuildManager(type_map)
 
 
 ############################################
@@ -415,8 +409,7 @@ def get_baz_buildmanager():
 
     type_map.register_map(BazBucket, BazBucketMapper)
 
-    manager = BuildManager(type_map)
-    return manager
+    return BuildManager(type_map)
 
 
 def create_test_type_map(specs, container_classes, mappers=None):
@@ -468,8 +461,8 @@ def create_load_namespace_yaml(namespace_name, specs, output_dir, incl_types, ty
         doc='a test namespace',
         version='0.1.0',
     )
-    ns_filename = ns_builder.name + '.namespace.yaml'
-    ext_filename = ns_builder.name + '.extensions.yaml'
+    ns_filename = f'{ns_builder.name}.namespace.yaml'
+    ext_filename = f'{ns_builder.name}.extensions.yaml'
 
     for ns, types in incl_types.items():
         if types is None:  # include all types
@@ -490,7 +483,7 @@ def create_load_namespace_yaml(namespace_name, specs, output_dir, incl_types, ty
 
 def swap_inc_def(cls, custom_cls):
     args = get_docval(cls.__init__)
-    ret = list()
+    ret = []
     for arg in args:
         if arg['name'] == 'data_type_def':
             ret.append({'name': 'my_data_type_def', 'type': str,
@@ -532,8 +525,7 @@ class BaseStorageOverride:
             spec_dict[cls.inc_key()] = spec_dict.pop(proxy.inc_key())
         if proxy.def_key() in spec_dict:
             spec_dict[cls.def_key()] = spec_dict.pop(proxy.def_key())
-        ret = proxy.build_const_args(spec_dict)
-        return ret
+        return proxy.build_const_args(spec_dict)
 
     @classmethod
     def _translate_kwargs(cls, kwargs):

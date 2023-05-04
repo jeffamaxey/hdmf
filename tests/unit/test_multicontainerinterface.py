@@ -64,7 +64,7 @@ class Baz(MultiContainerInterface):
     def __init__(self, name, other_arg, my_containers):
         super().__init__(name=name)
         self.other_arg = other_arg
-        self.containers = {'my ' + v.name: v for v in my_containers}
+        self.containers = {f'my {v.name}': v for v in my_containers}
 
     @property
     def containers(self):

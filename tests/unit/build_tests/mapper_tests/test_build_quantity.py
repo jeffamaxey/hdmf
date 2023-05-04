@@ -40,10 +40,7 @@ class NotSimpleQux(Data):
 
 class SimpleBucket(Container):
 
-    @docval({'name': 'name', 'type': str, 'doc': 'the name of this SimpleBucket'},
-            {'name': 'foos', 'type': list, 'doc': 'the SimpleFoo objects', 'default': list()},
-            {'name': 'quxs', 'type': list, 'doc': 'the SimpleQux objects', 'default': list()},
-            {'name': 'links', 'type': list, 'doc': 'another way to store SimpleFoo objects', 'default': list()})
+    @docval({'name': 'name', 'type': str, 'doc': 'the name of this SimpleBucket'}, {'name': 'foos', 'type': list, 'doc': 'the SimpleFoo objects', 'default': []}, {'name': 'quxs', 'type': list, 'doc': 'the SimpleQux objects', 'default': []}, {'name': 'links', 'type': list, 'doc': 'another way to store SimpleFoo objects', 'default': []})
     def __init__(self, **kwargs):
         name, foos, quxs, links = getargs('name', 'foos', 'quxs', 'links', kwargs)
         super().__init__(name=name)
@@ -102,22 +99,26 @@ class BuildQuantityMixin:
 
     def _create_builder(self, container):
         """Helper function to get a basic builder for a container with no subgroups/datasets/links."""
-        if isinstance(container, Container):
-            ret = GroupBuilder(
+        return (
+            GroupBuilder(
                 name=container.name,
-                attributes={'namespace': container.namespace,
-                            'data_type': container.data_type,
-                            'object_id': container.object_id}
+                attributes={
+                    'namespace': container.namespace,
+                    'data_type': container.data_type,
+                    'object_id': container.object_id,
+                },
             )
-        else:
-            ret = DatasetBuilder(
+            if isinstance(container, Container)
+            else DatasetBuilder(
                 name=container.name,
                 data=container.data,
-                attributes={'namespace': container.namespace,
-                            'data_type': container.data_type,
-                            'object_id': container.object_id}
+                attributes={
+                    'namespace': container.namespace,
+                    'data_type': container.data_type,
+                    'object_id': container.object_id,
+                },
             )
-        return ret
+        )
 
 
 class TypeIncUntypedGroupMixin:

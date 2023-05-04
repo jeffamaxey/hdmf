@@ -21,10 +21,7 @@ class HDF5Encoder(json.JSONEncoder):
                     break
                 except:  # noqa: E722
                     pass
-            if ret is None:
-                return obj
-            else:
-                return ret
+            return obj if ret is None else ret
         elif isinstance(obj, np.int64):
             return int(obj)
         elif isinstance(obj, bytes):
@@ -40,34 +37,28 @@ class GroupBuilderTestCase(TestCase):
     def __is_scalar(self, obj):
         if hasattr(obj, 'shape'):
             return len(obj.shape) == 0
-        else:
-            if any(isinstance(obj, t) for t in (int, str, float, bytes, str)):
-                return True
-        return False
+        return any((isinstance(obj, t) for t in (int, str, float, bytes, str)))
 
     def __convert_h5_scalar(self, obj):
-        if isinstance(obj, Dataset):
-            return obj[...]
-        return obj
+        return obj[...] if isinstance(obj, Dataset) else obj
 
     def __compare_attr_dicts(self, a, b):
-        reasons = list()
+        reasons = []
         b_keys = set(b.keys())
         for k in a:
             if k not in b:
-                reasons.append("'%s' attribute missing from second dataset" % k)
+                reasons.append(f"'{k}' attribute missing from second dataset")
             else:
                 if a[k] != b[k]:
-                    reasons.append("'%s' attribute on datasets not equal" % k)
+                    reasons.append(f"'{k}' attribute on datasets not equal")
                 b_keys.remove(k)
-        for k in b_keys:
-            reasons.append("'%s' attribute missing from first dataset" % k)
+        reasons.extend(f"'{k}' attribute missing from first dataset" for k in b_keys)
         return reasons
 
     def __compare_dataset(self, a, b):
         reasons = self.__compare_attr_dicts(a.attributes, b.attributes)
         if not self.__compare_data(a.data, b.data):
-            reasons.append("dataset '%s' not equal" % a.name)
+            reasons.append(f"dataset '{a.name}' not equal")
         return reasons
 
     def __compare_data(self, a, b):
@@ -82,34 +73,31 @@ class GroupBuilderTestCase(TestCase):
                 return self.__convert_h5_scalar(a_scalar) == self.__convert_h5_scalar(b_scalar)
             elif a_scalar != b_scalar:
                 return False
-            if len(a) == len(b):
-                for i in range(len(a)):
-                    if not self.__compare_data(a[i], b[i]):
-                        return False
-            else:
+            if len(a) != len(b):
                 return False
+            for i in range(len(a)):
+                if not self.__compare_data(a[i], b[i]):
+                    return False
         return True
 
     def __fmt(self, val):
-        return "%s (%s)" % (val, type(val))
+        return f"{val} ({type(val)})"
 
     def __assert_helper(self, a, b):
-        reasons = list()
+        reasons = []
         b_keys = set(b.keys())
         for k, a_sub in a.items():
             if k in b:
                 b_sub = b[k]
                 b_keys.remove(k)
-                if isinstance(a_sub, LinkBuilder) and isinstance(a_sub, LinkBuilder):
+                if isinstance(a_sub, LinkBuilder):
                     a_sub = a_sub['builder']
                     b_sub = b_sub['builder']
-                elif isinstance(a_sub, LinkBuilder) != isinstance(a_sub, LinkBuilder):
-                    reasons.append('%s != %s' % (a_sub, b_sub))
-                if isinstance(a_sub, DatasetBuilder) and isinstance(a_sub, DatasetBuilder):
+                if isinstance(a_sub, DatasetBuilder):
                     # if not self.__compare_dataset(a_sub, b_sub):
                     #    reasons.append('%s != %s' % (a_sub, b_sub))
                     reasons.extend(self.__compare_dataset(a_sub, b_sub))
-                elif isinstance(a_sub, GroupBuilder) and isinstance(a_sub, GroupBuilder):
+                elif isinstance(a_sub, GroupBuilder):
                     reasons.extend(self.__assert_helper(a_sub, b_sub))
                 else:
                     equal = None
@@ -122,18 +110,16 @@ class GroupBuilderTestCase(TestCase):
                         if b_array:
                             if b_sub.dtype.char in ('S', 'U'):
                                 a_sub = [np.string_(s) for s in a_sub]
-                        else:
-                            if a_sub.dtype.char in ('S', 'U'):
-                                b_sub = [np.string_(s) for s in b_sub]
+                        elif a_sub.dtype.char in ('S', 'U'):
+                            b_sub = [np.string_(s) for s in b_sub]
                         equal = np.array_equal(a_sub, b_sub)
                     else:
                         equal = a_sub == b_sub
                     if not equal:
-                        reasons.append('%s != %s' % (self.__fmt(a_sub), self.__fmt(b_sub)))
+                        reasons.append(f'{self.__fmt(a_sub)} != {self.__fmt(b_sub)}')
             else:
-                reasons.append("'%s' not in both" % k)
-        for k in b_keys:
-            reasons.append("'%s' not in both" % k)
+                reasons.append(f"'{k}' not in both")
+        reasons.extend(f"'{k}' not in both" for k in b_keys)
         return reasons
 
     def assertBuilderEqual(self, a, b):

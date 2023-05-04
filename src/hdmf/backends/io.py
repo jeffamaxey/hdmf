@@ -18,7 +18,7 @@ class HDMFIO(metaclass=ABCMeta):
             source = str(source)
 
         self.__manager = manager
-        self.__built = dict()
+        self.__built = {}
         self.__source = source
         self.open()
 
@@ -39,8 +39,7 @@ class HDMFIO(metaclass=ABCMeta):
         if all(len(v) == 0 for v in f_builder.values()):
             # TODO also check that the keys are appropriate. print a better error message
             raise UnsupportedOperation('Cannot build data. There are no values.')
-        container = self.__manager.construct(f_builder)
-        return container
+        return self.__manager.construct(f_builder)
 
     @docval({'name': 'container', 'type': Container, 'doc': 'the Container object to write'},
             allow_extra=True)
@@ -50,13 +49,10 @@ class HDMFIO(metaclass=ABCMeta):
         f_builder = self.__manager.build(container, source=self.__source, root=True)
         self.write_builder(f_builder, **kwargs)
 
-    @docval({'name': 'src_io', 'type': 'HDMFIO', 'doc': 'the HDMFIO object for reading the data to export'},
-            {'name': 'container', 'type': Container,
+    @docval({'name': 'src_io', 'type': 'HDMFIO', 'doc': 'the HDMFIO object for reading the data to export'}, {'name': 'container', 'type': Container,
              'doc': ('the Container object to export. If None, then the entire contents of the HDMFIO object will be '
                      'exported'),
-             'default': None},
-            {'name': 'write_args', 'type': dict, 'doc': 'arguments to pass to :py:meth:`write_builder`',
-             'default': dict()})
+             'default': None}, {'name': 'write_args', 'type': dict, 'doc': 'arguments to pass to :py:meth:`write_builder`', 'default': {}})
     def export(self, **kwargs):
         """Export from one backend to the backend represented by this class.
 

@@ -29,14 +29,14 @@ class Array:
         return self.__data[arg]
 
     def __sliceiter(self, arg):
-        return (x for x in range(*arg.indices(len(self))))
+        return iter(range(*arg.indices(len(self))))
 
     def __getitem__(self, arg):
         if isinstance(arg, list):
-            idx = list()
+            idx = []
             for i in arg:
                 if isinstance(i, slice):
-                    idx.extend(x for x in self.__sliceiter(i))
+                    idx.extend(iter(self.__sliceiter(i)))
                 else:
                     idx.append(i)
             return np.fromiter((self.__getidx__(x) for x in idx), dtype=self.dtype)
@@ -61,8 +61,7 @@ class AbstractSortedArray(Array, metaclass=ABCMeta):
         return self
 
     def __lower(self, other):
-        ins = self.find_point(other)
-        return ins
+        return self.find_point(other)
 
     def __upper(self, other):
         ins = self.__lower(other)
@@ -88,66 +87,55 @@ class AbstractSortedArray(Array, metaclass=ABCMeta):
 
     @staticmethod
     def __sort(a):
-        if isinstance(a, tuple):
-            return a[0]
-        else:
-            return a
+        return a[0] if isinstance(a, tuple) else a
 
     def __eq__(self, other):
         if isinstance(other, list):
-            ret = list()
+            ret = []
             for i in other:
                 eq = self == i
                 ret.append(eq)
             ret = sorted(ret, key=self.__sort)
-            tmp = list()
+            tmp = []
             for i in range(1, len(ret)):
                 a, b = ret[i - 1], ret[i]
                 if isinstance(a, tuple):
-                    if isinstance(b, tuple):
-                        if a[1] >= b[0]:
-                            b[0] = a[0]
-                        else:
-                            tmp.append(slice(*a))
+                    if isinstance(b, tuple) and a[1] >= b[0]:
+                        b[0] = a[0]
+                    elif isinstance(b, tuple) or b > a[1]:
+                        tmp.append(slice(*a))
+                    elif b == a[1]:
+                        a[1] == b + 1
                     else:
-                        if b > a[1]:
-                            tmp.append(slice(*a))
-                        elif b == a[1]:
-                            a[1] == b + 1
-                        else:
-                            ret[i] = a
-                else:
-                    if isinstance(b, tuple):
-                        if a < b[0]:
-                            tmp.append(a)
-                    else:
-                        if b - a == 1:
-                            ret[i] = (a, b)
-                        else:
-                            tmp.append(a)
+                        ret[i] = a
+                elif (
+                    isinstance(b, tuple)
+                    and a < b[0]
+                    or not isinstance(b, tuple)
+                    and b - a != 1
+                ):
+                    tmp.append(a)
+                elif not isinstance(b, tuple):
+                    ret[i] = (a, b)
             if isinstance(ret[-1], tuple):
                 tmp.append(slice(*ret[-1]))
             else:
                 tmp.append(ret[-1])
-            ret = tmp
-            return ret
+            return tmp
         elif isinstance(other, tuple):
             ge = self >= other[0]
             ge = ge.start
             lt = self < other[1]
             lt = lt.stop
-            if ge == lt:
-                return ge
-            else:
-                return slice(ge, lt)
+            return ge if ge == lt else slice(ge, lt)
         else:
             lower = self.__lower(other)
             upper = self.__upper(other)
             d = upper - lower
-            if d == 1:
-                return lower
-            elif d == 0:
+            if d == 0:
                 return None
+            elif d == 1:
+                return lower
             else:
                 return slice(lower, upper)
 
@@ -188,10 +176,7 @@ class LinSpace(SortedArray):
     def find_point(self, val):
         nsteps = (val - self.start) / self.step
         fl = int(nsteps)
-        if fl == nsteps:
-            return int(fl)
-        else:
-            return int(fl + 1)
+        return fl if fl == nsteps else int(fl + 1)
 
     def __getidx__(self, arg):
         return self.start + self.step * arg

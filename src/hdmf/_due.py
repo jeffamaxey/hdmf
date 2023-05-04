@@ -43,7 +43,7 @@ class InactiveDueCreditCollector(object):
     activate = add = cite = dump = load = _donothing
 
     def __repr__(self):
-        return self.__class__.__name__ + '()'
+        return f'{self.__class__.__name__}()'
 
 
 def _donothing_func(*args, **kwargs):
@@ -60,7 +60,8 @@ except Exception as e:
     if not isinstance(e, ImportError):
         import logging
         logging.getLogger("duecredit").error(
-            "Failed to import duecredit due to %s" % str(e))
+            f"Failed to import duecredit due to {str(e)}"
+        )
     # Initiate due stub
     due = InactiveDueCreditCollector()
     BibTeX = Doi = Url = Text = _donothing_func

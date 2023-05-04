@@ -24,7 +24,9 @@ class TestCase(unittest.TestCase):
         assertRaisesRegex, but checks for an exact match.
         """
 
-        return self.assertRaisesRegex(exc_type, '^%s$' % re.escape(exc_msg), *args, **kwargs)
+        return self.assertRaisesRegex(
+            exc_type, f'^{re.escape(exc_msg)}$', *args, **kwargs
+        )
 
     def assertWarnsWith(self, warn_type, exc_msg, *args, **kwargs):
         """
@@ -32,7 +34,9 @@ class TestCase(unittest.TestCase):
         assertWarnsRegex, but checks for an exact match.
         """
 
-        return self.assertWarnsRegex(warn_type, '^%s$' % re.escape(exc_msg), *args, **kwargs)
+        return self.assertWarnsRegex(
+            warn_type, f'^{re.escape(exc_msg)}$', *args, **kwargs
+        )
 
     def assertContainerEqual(self, container1, container2,
                              ignore_name=False, ignore_hdmf_attrs=False, ignore_string_to_byte=False):
@@ -107,8 +111,11 @@ class TestCase(unittest.TestCase):
         self.assertContainerEqual(data1, data2, ignore_hdmf_attrs=ignore_hdmf_attrs)
 
     def _assert_array_equal(self, arr1, arr2, ignore_hdmf_attrs=False, ignore_string_to_byte=False):
-        array_data_types = tuple([i for i in get_docval_macro('array_data')
-                                  if (i != list and i != tuple and i != AbstractDataChunkIterator)])
+        array_data_types = tuple(
+            i
+            for i in get_docval_macro('array_data')
+            if i not in [list, tuple, AbstractDataChunkIterator]
+        )
         # We construct array_data_types this way to avoid explicit dependency on h5py, Zarr and other
         # I/O backends. Only list and tuple do not support [()] slicing, and AbstractDataChunkIterator
         # should never occur here. The effective value of array_data_types is then:
@@ -117,17 +124,9 @@ class TestCase(unittest.TestCase):
             arr1 = arr1[()]
         if isinstance(arr2, array_data_types):
             arr2 = arr2[()]
-        if not isinstance(arr1, (tuple, list, np.ndarray)) and not isinstance(arr2, (tuple, list, np.ndarray)):
-            if isinstance(arr1, (float, np.floating)):
-                np.testing.assert_allclose(arr1, arr2)
-            else:
-                if ignore_string_to_byte:
-                    if isinstance(arr1, bytes):
-                        arr1 = arr1.decode('utf-8')
-                    if isinstance(arr2, bytes):
-                        arr2 = arr2.decode('utf-8')
-                self.assertEqual(arr1, arr2)  # scalar
-        else:
+        if isinstance(arr1, (tuple, list, np.ndarray)) or isinstance(
+            arr2, (tuple, list, np.ndarray)
+        ):
             self.assertEqual(len(arr1), len(arr2))
             if isinstance(arr1, np.ndarray) and len(arr1.dtype) > 1:  # compound type
                 arr1 = arr1.tolist()
@@ -152,6 +151,16 @@ class TestCase(unittest.TestCase):
                         self._assert_array_equal(sub1, sub2,
                                                  ignore_hdmf_attrs=ignore_hdmf_attrs,
                                                  ignore_string_to_byte=ignore_string_to_byte)
+
+        elif isinstance(arr1, (float, np.floating)):
+            np.testing.assert_allclose(arr1, arr2)
+        else:
+            if ignore_string_to_byte:
+                if isinstance(arr1, bytes):
+                    arr1 = arr1.decode('utf-8')
+                if isinstance(arr2, bytes):
+                    arr2 = arr2.decode('utf-8')
+            self.assertEqual(arr1, arr2)  # scalar
 
     def assertBuilderEqual(self, builder1, builder2, check_path=True, check_source=True):
         """Test whether two builders are equal. Like assertDictEqual but also checks type, name, path, and source.
@@ -188,8 +197,8 @@ class H5RoundTripMixin(metaclass=ABCMeta):
         self.__manager = get_manager()
         self.container = self.setUpContainer()
         self.container_type = self.container.__class__.__name__
-        self.filename = 'test_%s.h5' % self.container_type
-        self.export_filename = 'test_export_%s.h5' % self.container_type
+        self.filename = f'test_{self.container_type}.h5'
+        self.export_filename = f'test_export_{self.container_type}.h5'
         self.writer = None
         self.reader = None
         self.export_reader = None
@@ -259,14 +268,12 @@ class H5RoundTripMixin(metaclass=ABCMeta):
         """Validate the written and exported files, if they exist."""
         if os.path.exists(self.filename):
             with HDF5IO(self.filename, manager=get_manager(), mode='r') as io:
-                errors = common_validate(io, experimental=experimental)
-                if errors:
+                if errors := common_validate(io, experimental=experimental):
                     for err in errors:
                         raise Exception(err)
 
         if os.path.exists(self.export_filename):
             with HDF5IO(self.filename, manager=get_manager(), mode='r') as io:
-                errors = common_validate(io, experimental=experimental)
-                if errors:
+                if errors := common_validate(io, experimental=experimental):
                     for err in errors:
                         raise Exception(err)

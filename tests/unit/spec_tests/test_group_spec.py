@@ -206,18 +206,16 @@ class GroupSpecTests(TestCase):
         spec2_dsets = spec2.datasets
         if len(spec1_dsets) != len(spec2_dsets):
             raise AssertionError('different number of AttributeSpecs')
-        else:
-            for i in range(len(spec1_dsets)):
-                self.assertAttributesEqual(spec1_dsets[i], spec2_dsets[i])
+        for i in range(len(spec1_dsets)):
+            self.assertAttributesEqual(spec1_dsets[i], spec2_dsets[i])
 
     def assertAttributesEqual(self, spec1, spec2):
         spec1_attr = spec1.attributes
         spec2_attr = spec2.attributes
         if len(spec1_attr) != len(spec2_attr):
             raise AssertionError('different number of AttributeSpecs')
-        else:
-            for i in range(len(spec1_attr)):
-                self.assertDictEqual(spec1_attr[i], spec2_attr[i])
+        for i in range(len(spec1_attr)):
+            self.assertDictEqual(spec1_attr[i], spec2_attr[i])
 
     def test_add_attribute(self):
         spec = GroupSpec('A test group',

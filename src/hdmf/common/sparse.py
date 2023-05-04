@@ -41,9 +41,11 @@ class CSRMatrix(Container):
         try:
             ar = to_uint_array(ar)
         except ValueError as ve:
-            raise ValueError("Cannot convert '%s' to an array of unsigned integers." % arg) from ve
+            raise ValueError(
+                f"Cannot convert '{arg}' to an array of unsigned integers."
+            ) from ve
         if ar.ndim != 1:
-            raise ValueError("'%s' must be a 1D array of unsigned integers." % arg)
+            raise ValueError(f"'{arg}' must be a 1D array of unsigned integers.")
         return ar
 
     def __getattr__(self, val):

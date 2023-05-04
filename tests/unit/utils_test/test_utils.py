@@ -63,7 +63,7 @@ class TestGetDataShape(TestCase):
 
     def test_list(self):
         """Test get_data_shape on lists of various shapes."""
-        res = get_data_shape(list())
+        res = get_data_shape([])
         self.assertTupleEqual(res, (0, ))
 
         res = get_data_shape([1, 2])
@@ -99,7 +99,7 @@ class TestGetDataShape(TestCase):
 
     def test_other(self):
         """Test get_data_shape on miscellaneous edge cases."""
-        res = get_data_shape(dict())
+        res = get_data_shape({})
         self.assertIsNone(res)
 
         res = get_data_shape(None)

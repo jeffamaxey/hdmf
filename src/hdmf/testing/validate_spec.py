@@ -17,7 +17,7 @@ def validate_spec(fpath_spec, fpath_schema):
     :param fpath_schema: path-like
     """
 
-    schemaAbs = 'file://' + os.path.abspath(fpath_schema)
+    schemaAbs = f'file://{os.path.abspath(fpath_schema)}'
 
     f_schema = open(fpath_schema, 'r')
     schema = json.load(f_schema)

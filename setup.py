@@ -43,7 +43,7 @@ setup_args = {
     'install_requires': reqs,
     'packages': pkgs,
     'package_dir': {'': 'src'},
-    'package_data': {'hdmf': ["%s/*.yaml" % schema_dir, "%s/*.json" % schema_dir]},
+    'package_data': {'hdmf': [f"{schema_dir}/*.yaml", f"{schema_dir}/*.json"]},
     'python_requires': '>=3.7',
     'classifiers': [
         "Programming Language :: Python",
@@ -58,21 +58,23 @@ setup_args = {
         "Operating System :: Microsoft :: Windows",
         "Operating System :: MacOS",
         "Operating System :: Unix",
-        "Topic :: Scientific/Engineering :: Medical Science Apps."
+        "Topic :: Scientific/Engineering :: Medical Science Apps.",
     ],
     'keywords': 'python '
-                'HDF '
-                'HDF5 '
-                'cross-platform '
-                'open-data '
-                'data-format '
-                'open-source '
-                'open-science '
-                'reproducible-research ',
+    'HDF '
+    'HDF5 '
+    'cross-platform '
+    'open-data '
+    'data-format '
+    'open-source '
+    'open-science '
+    'reproducible-research ',
     'zip_safe': False,
     'entry_points': {
-        'console_scripts': ['validate_hdmf_spec=hdmf.testing.validate_spec:main'],
-    }
+        'console_scripts': [
+            'validate_hdmf_spec=hdmf.testing.validate_spec:main'
+        ],
+    },
 }
 
 if __name__ == '__main__':

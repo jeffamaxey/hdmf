@@ -9,6 +9,7 @@ improve the structure and access of data stored with this type for your use case
 
 """
 
+
 ###############################################################################
 # Introduction
 # ------------------------------------------------------
@@ -500,7 +501,7 @@ with sqlite3.connect(db_file) as db:
     # convert all tables to pandas and compare with the original tables
     for table_name in tables:
         table_name = table_name[0]
-        table = pd.read_sql_query("SELECT * from %s" % table_name, db)
+        table = pd.read_sql_query(f"SELECT * from {table_name}", db)
         table.set_index('id', inplace=True)
         ref_table = getattr(er, table_name).to_dataframe()
         assert(np.all(np.array(table.index) == np.array(ref_table.index) + 1))

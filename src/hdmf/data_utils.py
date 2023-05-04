@@ -24,7 +24,7 @@ def append_data(data, arg):
         data[-1] = arg
         return data
     else:
-        msg = "Data cannot append to object of type '%s'" % type(data)
+        msg = f"Data cannot append to object of type '{type(data)}'"
         raise ValueError(msg)
 
 
@@ -46,7 +46,7 @@ def extend_data(data, arg):
         data[-len(arg):] = arg
         return data
     else:
-        msg = "Data cannot extend object of type '%s'" % type(data)
+        msg = f"Data cannot extend object of type '{type(data)}'"
         raise ValueError(msg)
 
 
@@ -234,18 +234,32 @@ class GenericDataChunkIterator(AbstractDataChunkIterator):
 
         self.num_buffers = np.prod(np.ceil(array_maxshape / array_buffer_shape))
         self.buffer_selection_generator = (
-            tuple([slice(lower_bound, upper_bound) for lower_bound, upper_bound in zip(lower_bounds, upper_bounds)])
+            tuple(
+                slice(lower_bound, upper_bound)
+                for lower_bound, upper_bound in zip(lower_bounds, upper_bounds)
+            )
             for lower_bounds, upper_bounds in zip(
                 product(
                     *[
                         range(0, max_shape_axis, buffer_shape_axis)
-                        for max_shape_axis, buffer_shape_axis in zip(self.maxshape, self.buffer_shape)
+                        for max_shape_axis, buffer_shape_axis in zip(
+                            self.maxshape, self.buffer_shape
+                        )
                     ]
                 ),
                 product(
                     *[
-                        chain(range(buffer_shape_axis, max_shape_axis, buffer_shape_axis), [max_shape_axis])
-                        for max_shape_axis, buffer_shape_axis in zip(self.maxshape, self.buffer_shape)
+                        chain(
+                            range(
+                                buffer_shape_axis,
+                                max_shape_axis,
+                                buffer_shape_axis,
+                            ),
+                            [max_shape_axis],
+                        )
+                        for max_shape_axis, buffer_shape_axis in zip(
+                            self.maxshape, self.buffer_shape
+                        )
                     ]
                 ),
             )
@@ -253,7 +267,7 @@ class GenericDataChunkIterator(AbstractDataChunkIterator):
 
         if self.display_progress:
             if self.progress_bar_options is None:
-                self.progress_bar_options = dict()
+                self.progress_bar_options = {}
 
             try:
                 from tqdm import tqdm
@@ -297,7 +311,7 @@ class GenericDataChunkIterator(AbstractDataChunkIterator):
             v[v_ind] = np.floor(next_v / np.min(next_v))
             prod_v = np.prod(v)
         k = np.floor((chunk_bytes / (prod_v * itemsize)) ** (1 / n_dims))
-        return tuple([min(int(x), self.maxshape[dim]) for dim, x in enumerate(k * v)])
+        return tuple(min(int(x), self.maxshape[dim]) for dim, x in enumerate(k * v))
 
     @docval(
         dict(
@@ -323,10 +337,10 @@ class GenericDataChunkIterator(AbstractDataChunkIterator):
         k = np.floor(
             (buffer_gb * 1e9 / (np.prod(self.chunk_shape) * self.dtype.itemsize)) ** (1 / len(self.chunk_shape))
         )
-        return tuple([
+        return tuple(
             min(max(int(x), self.chunk_shape[j]), self.maxshape[j])
             for j, x in enumerate(k * np.array(self.chunk_shape))
-        ])
+        )
 
     def recommended_chunk_shape(self) -> tuple:
         return self.chunk_shape
@@ -455,9 +469,7 @@ class DataChunkIterator(AbstractDataChunkIterator):
                     self.data = np.asarray([self.data, ])
                     self.__maxshape = self.data.shape
                     self.__data_iter = iter(self.data)
-            # Try to get an accurate idea of __maxshape for other Python data structures if possible.
-            # Don't just call get_data_shape for a generator as that would potentially trigger loading of all the data
-            elif isinstance(self.data, list) or isinstance(self.data, tuple):
+            elif isinstance(self.data, (list, tuple)):
                 self.__maxshape = get_data_shape(self.data, strict_no_data_load=True)
 
         # If we have a data iterator and do not know the dtype, then read the first chunk
@@ -498,9 +510,7 @@ class DataChunkIterator(AbstractDataChunkIterator):
             if start_index >= iter_data_bounds:
                 self.__next_chunk = DataChunk(None, None)
             else:
-                if stop_index > iter_data_bounds:
-                    stop_index = iter_data_bounds
-
+                stop_index = min(stop_index, iter_data_bounds)
                 selection = [slice(None)] * len(self.maxshape)
                 selection[self.iter_axis] = slice(start_index, stop_index)
                 selection = tuple(selection)
@@ -515,7 +525,7 @@ class DataChunkIterator(AbstractDataChunkIterator):
             while len(iter_pieces) < self.buffer_size:
                 try:
                     dat = next(self.__data_iter)
-                    if dat is None and len(iter_pieces) == 0:
+                    if dat is None and not iter_pieces:
                         # Skip forward in our chunk until we find data
                         curr_chunk_offset += 1
                     elif dat is None and len(iter_pieces) > 0:
@@ -529,7 +539,7 @@ class DataChunkIterator(AbstractDataChunkIterator):
                 except StopIteration:
                     break
 
-            if len(iter_pieces) == 0:
+            if not iter_pieces:
                 self.__next_chunk = DataChunk(None, None)  # signal end of iteration
             else:
                 # concatenate all the pieces into the chunk along the iteration axis
@@ -607,9 +617,10 @@ class DataChunkIterator(AbstractDataChunkIterator):
     def recommended_data_shape(self):
         """Recommend an initial shape of the data. This is useful when progressively writing data and
         we want to recommend an initial size for the dataset"""
-        if self.maxshape is not None:
-            if np.all([i is not None for i in self.maxshape]):
-                return self.maxshape
+        if self.maxshape is not None and np.all(
+            [i is not None for i in self.maxshape]
+        ):
+            return self.maxshape
         return self.__first_chunk_shape
 
     @property
@@ -670,19 +681,14 @@ class DataChunk:
 
     def __len__(self):
         """Get the number of values in the data chunk"""
-        if self.data is not None:
-            return len(self.data)
-        else:
-            return 0
+        return len(self.data) if self.data is not None else 0
 
     def __getattr__(self, attr):
         """Delegate retrival of attributes to the data in self.data"""
         return getattr(self.data, attr)
 
     def __copy__(self):
-        newobj = DataChunk(data=self.data,
-                           selection=self.selection)
-        return newobj
+        return DataChunk(data=self.data, selection=self.selection)
 
     def __deepcopy__(self, memo):
         result = DataChunk(data=copy.deepcopy(self.data),
@@ -714,7 +720,10 @@ class DataChunk:
         """
         if isinstance(self.selection, tuple):
             # Determine the minimum array dimensions to fit the chunk selection
-            max_bounds = tuple([x.stop or 0 if isinstance(x, slice) else x+1 for x in self.selection])
+            max_bounds = tuple(
+                x.stop or 0 if isinstance(x, slice) else x + 1
+                for x in self.selection
+            )
         elif isinstance(self.selection, int):
             max_bounds = (self.selection+1, )
         elif isinstance(self.selection, slice):
@@ -766,8 +775,8 @@ def assertEqualShape(data1,
     num_dims_1 = len(response.shape1) if response.shape1 is not None else None
     num_dims_2 = len(response.shape2) if response.shape2 is not None else None
     # Determine the string names of the datasets
-    n1 = name1 if name1 is not None else ("data1 at " + str(hex(id(data1))))
-    n2 = name2 if name2 is not None else ("data2 at " + str(hex(id(data2))))
+    n1 = name1 if name1 is not None else f"data1 at {hex(id(data1))}"
+    n2 = name2 if name2 is not None else f"data2 at {hex(id(data2))}"
     # Determine the axes we should compare
     response.axes1 = list(range(num_dims_1)) if axes1 is None else ([axes1] if isinstance(axes1, int) else axes1)
     response.axes2 = list(range(num_dims_2)) if axes2 is None else ([axes2] if isinstance(axes2, int) else axes2)
@@ -777,14 +786,12 @@ def assertEqualShape(data1,
         response.result = False
         response.error = 'NUM_DIMS_ERROR'
         response.message = response.SHAPE_ERROR[response.error]
-        response.message += " %s is %sD and %s is %sD" % (n1, num_dims_1, n2, num_dims_2)
-    # 2) Check that we have the same number of dimensions to compare on both arrays
+        response.message += f" {n1} is {num_dims_1}D and {n2} is {num_dims_2}D"
     elif len(response.axes1) != len(response.axes2):
         response.result = False
         response.error = 'NUM_AXES_ERROR'
         response.message = response.SHAPE_ERROR[response.error]
-        response.message += " Cannot compare axes %s with %s" % (str(response.axes1), str(response.axes2))
-    # 3) Check that the datasets have sufficient numner of dimensions
+        response.message += f" Cannot compare axes {str(response.axes1)} with {str(response.axes2)}"
     elif np.max(response.axes1) >= num_dims_1 or np.max(response.axes2) >= num_dims_2:
         response.result = False
         response.error = 'AXIS_OUT_OF_BOUNDS'
@@ -795,7 +802,6 @@ def assertEqualShape(data1,
         elif np.max(response.axes2) >= num_dims_2:
             response.message += "Insufficient number of dimensions for %s -- Expected %i found %i" % \
                                 (n2, np.max(response.axes2) + 1, num_dims_2)
-    # 4) Compare the length of the dimensions we should validate
     else:
         unmatched = []
         ignored = []
@@ -809,25 +815,17 @@ def assertEqualShape(data1,
         response.ignored = ignored
 
         # Check if everything checked out
-        if len(response.unmatched) == 0:
+        if not response.unmatched:
             response.result = True
             response.error = None
             response.message = response.SHAPE_ERROR[response.error]
-            if len(response.ignored) > 0:
-                response.message += " Ignored undetermined axes %s" % str(response.ignored)
         else:
             response.result = False
             response.error = 'AXIS_LEN_ERROR'
             response.message = response.SHAPE_ERROR[response.error]
-            response.message += "Axes %s with size %s of %s did not match dimensions %s with sizes %s of %s." % \
-                                (str([un[0] for un in response.unmatched]),
-                                 str([response.shape1[un[0]] for un in response.unmatched]),
-                                 n1,
-                                 str([un[1] for un in response.unmatched]),
-                                 str([response.shape2[un[1]] for un in response.unmatched]),
-                                 n2)
-            if len(response.ignored) > 0:
-                response.message += " Ignored undetermined axes %s" % str(response.ignored)
+            response.message += f"Axes {[un[0] for un in response.unmatched]} with size {[response.shape1[un[0]] for un in response.unmatched]} of {n1} did not match dimensions {[un[1] for un in response.unmatched]} with sizes {[response.shape2[un[1]] for un in response.unmatched]} of {n2}."
+        if response.ignored:
+            response.message += f" Ignored undetermined axes {response.ignored}"
     return response
 
 
@@ -879,8 +877,9 @@ class ShapeValidatorResult:
         """
         if key == 'error':
             if value not in self.SHAPE_ERROR.keys():
-                raise ValueError("Illegal error type. Error must be one of ShapeValidatorResult.SHAPE_ERROR: %s"
-                                 % str(self.SHAPE_ERROR))
+                raise ValueError(
+                    f"Illegal error type. Error must be one of ShapeValidatorResult.SHAPE_ERROR: {str(self.SHAPE_ERROR)}"
+                )
             else:
                 super().__setattr__(key, value)
         elif key in ['shape1', 'shape2', 'axes1', 'axes2', 'ignored', 'unmatched']:  # Make sure we sore tuples
@@ -913,7 +912,7 @@ class DataIO:
         """
         Returns a dict with the I/O parameters specified in this DataIO.
         """
-        return dict()
+        return {}
 
     @property
     def data(self):
@@ -936,8 +935,7 @@ class DataIO:
 
         :return: Shallow copy of self, ie., a new instance of DataIO wrapping the same self.data object
         """
-        newobj = DataIO(data=self.data)
-        return newobj
+        return DataIO(data=self.data)
 
     def append(self, arg):
         self.__data = append_data(self.__data, arg)
@@ -979,7 +977,9 @@ class DataIO:
             # np.array() checks __array__ or __array_struct__ attribute dep. on numpy version
             raise InvalidDataIOError("Cannot convert data to array. Data is not valid.")
         if not self.valid:
-            raise InvalidDataIOError("Cannot get attribute '%s' of data. Data is not valid." % attr)
+            raise InvalidDataIOError(
+                f"Cannot get attribute '{attr}' of data. Data is not valid."
+            )
         return getattr(self.data, attr)
 
     def __getitem__(self, item):

@@ -39,7 +39,7 @@ def docval_macro(macro):
 
     def _dec(cls):
         if macro not in __macros:
-            __macros[macro] = list()
+            __macros[macro] = []
         __macros[macro].append(cls)
         return cls
 
@@ -53,10 +53,7 @@ def get_docval_macro(key=None):
     :param key: Name of the macro. If key=None, then a dictionary of all macros is returned. Otherwise, a tuple of
                 the types associated with the key is returned.
     """
-    if key is None:
-        return _copy.deepcopy(__macros)
-    else:
-        return tuple(__macros[key])
+    return _copy.deepcopy(__macros) if key is None else tuple(__macros[key])
 
 
 def __type_okay(value, argtype, allow_none=False):
@@ -97,7 +94,7 @@ def __type_okay(value, argtype, allow_none=False):
         elif argtype is bool:
             return __is_bool(value)
         return isinstance(value, argtype)
-    elif isinstance(argtype, tuple) or isinstance(argtype, list):
+    elif isinstance(argtype, (tuple, list)):
         return any(__type_okay(value, i) for i in argtype)
     else:  # argtype is None
         return True
@@ -112,12 +109,9 @@ def __shape_okay_multi(value, argshape):
 
 def __shape_okay(value, argshape):
     valshape = get_data_shape(value)
-    if not len(valshape) == len(argshape):
+    if len(valshape) != len(argshape):
         return False
-    for a, b in zip(valshape, argshape):
-        if b not in (a, None):
-            return False
-    return True
+    return all(b in (a, None) for a, b in zip(valshape, argshape))
 
 
 def __is_uint(value):
@@ -141,10 +135,10 @@ def __format_type(argtype):
         return argtype
     elif isinstance(argtype, type):
         return argtype.__name__
-    elif isinstance(argtype, tuple) or isinstance(argtype, list):
+    elif isinstance(argtype, (tuple, list)):
         types = [__format_type(i) for i in argtype]
         if len(types) > 1:
-            return "%s or %s" % (", ".join(types[:-1]), types[-1])
+            return f'{", ".join(types[:-1])} or {types[-1]}'
         else:
             return types[0]
     elif argtype is None:
@@ -163,17 +157,14 @@ def __check_enum(argval, arg):
     :return: None if the value validates successfully, error message if the value does not.
     """
     if argval not in arg['enum']:
-        return "forbidden value for '{}' (got {}, expected {})".format(arg['name'], __fmt_str_quotes(argval),
-                                                                       arg['enum'])
+        return f"forbidden value for '{arg['name']}' (got {__fmt_str_quotes(argval)}, expected {arg['enum']})"
 
 
 def __fmt_str_quotes(x):
     """Return a string or list of strings where the input string or list of strings have single quotes around strings"""
     if isinstance(x, (list, tuple)):
-        return '{}'.format(x)
-    if isinstance(x, str):
-        return "'%s'" % x
-    return str(x)
+        return f'{x}'
+    return f"'{x}'" if isinstance(x, str) else str(x)
 
 
 def __parse_args(validator, args, kwargs, enforce_type=True, enforce_shape=True, allow_extra=False,  # noqa: C901

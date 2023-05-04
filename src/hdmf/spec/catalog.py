@@ -22,9 +22,9 @@ class SpecCatalog:
                     of the hierarchy but the contents are computed on first request by SpecCatalog.get_hierarchy(...)
         '''
         self.__specs = OrderedDict()
-        self.__parent_types = dict()
-        self.__hierarchy = dict()
-        self.__spec_source_files = dict()
+        self.__parent_types = {}
+        self.__hierarchy = {}
+        self.__spec_source_files = {}
 
     @docval({'name': 'spec', 'type': BaseStorageSpec, 'doc': 'a Spec object'},
             {'name': 'source_file', 'type': str,
@@ -41,9 +41,11 @@ class SpecCatalog:
         if ndt_def != ndt:
             self.__parent_types[ndt_def] = ndt
         type_name = ndt_def if ndt_def is not None else ndt
-        if type_name in self.__specs:
-            if self.__specs[type_name] != spec or self.__spec_source_files[type_name] != source_file:
-                raise ValueError("'%s' - cannot overwrite existing specification" % type_name)
+        if type_name in self.__specs and (
+            self.__specs[type_name] != spec
+            or self.__spec_source_files[type_name] != source_file
+        ):
+            raise ValueError(f"'{type_name}' - cannot overwrite existing specification")
         self.__specs[type_name] = spec
         self.__spec_source_files[type_name] = source_file
 
@@ -88,7 +90,7 @@ class SpecCatalog:
         '''
         spec, source_file = getargs('spec', 'source_file', kwargs)
         ndt = spec.data_type_def
-        ret = list()
+        ret = []
         if ndt is not None:
             self.register_spec(spec, source_file)
             ret.append(ndt)
@@ -118,7 +120,7 @@ class SpecCatalog:
             data_type = data_type.__name__
         ret = self.__hierarchy.get(data_type)
         if ret is None:
-            hierarchy = list()
+            hierarchy = []
             parent = data_type
             while parent is not None:
                 hierarchy.append(parent)
@@ -127,7 +129,7 @@ class SpecCatalog:
             # the top of the hierarchy
             tmp_hier = tuple(hierarchy)
             ret = tmp_hier
-            while len(tmp_hier) > 0:
+            while tmp_hier:
                 self.__hierarchy[tmp_hier[0]] = tmp_hier
                 tmp_hier = tmp_hier[1:]
         return tuple(ret)
@@ -153,9 +155,11 @@ class SpecCatalog:
         # Compute the type hierarchy
         for rt in sorted(registered_types):
             rt_spec = self.get_spec(rt)
-            if isinstance(rt_spec, BaseStorageSpec):  # Only BaseStorageSpec have data_type_inc/def keys
-                if rt_spec.get(rt_spec.inc_key(), None) is None:
-                    type_hierarchy[rt] = get_type_hierarchy(rt, self)
+            if (
+                isinstance(rt_spec, BaseStorageSpec)
+                and rt_spec.get(rt_spec.inc_key(), None) is None
+            ):
+                type_hierarchy[rt] = get_type_hierarchy(rt, self)
 
         return type_hierarchy
 
@@ -181,19 +185,18 @@ class SpecCatalog:
         """
         data_type, recursive = getargs('data_type', 'recursive', kwargs)
         curr_spec = self.get_spec(data_type)
-        if isinstance(curr_spec, BaseStorageSpec):  # Only BaseStorageSpec have data_type_inc/def keys
-            subtypes = []
-            spec_inc_key = curr_spec.inc_key()
-            spec_def_key = curr_spec.def_key()
-            for rt in self.get_registered_types():
-                rt_spec = self.get_spec(rt)
-                if rt_spec.get(spec_inc_key, None) == data_type and rt_spec.get(spec_def_key, None) != data_type:
-                    subtypes.append(rt)
-                    if recursive:
-                        subtypes += self.get_subtypes(rt)
-            return tuple(set(subtypes))  # Convert to a set to make sure we don't have any duplicates
-        else:
+        if not isinstance(curr_spec, BaseStorageSpec):
             return ()
+        spec_inc_key = curr_spec.inc_key()
+        spec_def_key = curr_spec.def_key()
+        subtypes = []
+        for rt in self.get_registered_types():
+            rt_spec = self.get_spec(rt)
+            if rt_spec.get(spec_inc_key, None) == data_type and rt_spec.get(spec_def_key, None) != data_type:
+                subtypes.append(rt)
+                if recursive:
+                    subtypes += self.get_subtypes(rt)
+        return tuple(set(subtypes))  # Convert to a set to make sure we don't have any duplicates
 
     def __copy__(self):
         ret = SpecCatalog()

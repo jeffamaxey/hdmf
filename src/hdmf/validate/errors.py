@@ -48,9 +48,9 @@ class Error:
     @staticmethod
     def __format_str(name, location, reason):
         if location is not None:
-            return "%s (%s): %s" % (name, location, reason)
+            return f"{name} ({location}): {reason}"
         else:
-            return "%s: %s" % (name, reason)
+            return f"{name}: {reason}"
 
     def __repr__(self):
         return self.__str__()
@@ -97,7 +97,7 @@ class DtypeError(Error):
         received = getargs('received', kwargs)
         if isinstance(expected, list):
             expected = DtypeHelper.simplify_cpd_type(expected)
-        reason = "incorrect type - expected '%s', got '%s'" % (expected, received)
+        reason = f"incorrect type - expected '{expected}', got '{received}'"
         loc = getargs('location', kwargs)
         super().__init__(name, reason, location=loc)
 
@@ -121,9 +121,9 @@ class MissingDataType(Error):
         name, data_type, missing_dt_name = getargs('name', 'data_type', 'missing_dt_name', kwargs)
         self.__data_type = data_type
         if missing_dt_name is not None:
-            reason = "missing data type %s (%s)" % (self.__data_type, missing_dt_name)
+            reason = f"missing data type {self.__data_type} ({missing_dt_name})"
         else:
-            reason = "missing data type %s" % self.__data_type
+            reason = f"missing data type {self.__data_type}"
         loc = getargs('location', kwargs)
         super().__init__(name, reason, location=loc)
 
@@ -141,7 +141,7 @@ class IncorrectQuantityError(Error):
             {'name': 'location', 'type': str, 'doc': 'the location of the error', 'default': None})
     def __init__(self, **kwargs):
         name, data_type, expected, received = getargs('name', 'data_type', 'expected', 'received', kwargs)
-        reason = "expected a quantity of %s for data type %s, received %s" % (str(expected), data_type, str(received))
+        reason = f"expected a quantity of {str(expected)} for data type {data_type}, received {str(received)}"
         loc = getargs('location', kwargs)
         super().__init__(name, reason, location=loc)
 
@@ -156,7 +156,7 @@ class ExpectedArrayError(Error):
         name = getargs('name', kwargs)
         expected = getargs('expected', kwargs)
         received = getargs('received', kwargs)
-        reason = "incorrect shape - expected an array of shape '%s', got non-array data '%s'" % (expected, received)
+        reason = f"incorrect shape - expected an array of shape '{expected}', got non-array data '{received}'"
         loc = getargs('location', kwargs)
         super().__init__(name, reason, location=loc)
 
@@ -171,7 +171,7 @@ class ShapeError(Error):
         name = getargs('name', kwargs)
         expected = getargs('expected', kwargs)
         received = getargs('received', kwargs)
-        reason = "incorrect shape - expected '%s', got '%s'" % (expected, received)
+        reason = f"incorrect shape - expected '{expected}', got '{received}'"
         loc = getargs('location', kwargs)
         super().__init__(name, reason, location=loc)
 
@@ -204,6 +204,6 @@ class IncorrectDataType(Error):
         name = getargs('name', kwargs)
         expected = getargs('expected', kwargs)
         received = getargs('received', kwargs)
-        reason = "incorrect data_type - expected '%s', got '%s'" % (expected, received)
+        reason = f"incorrect data_type - expected '{expected}', got '{received}'"
         loc = getargs('location', kwargs)
         super().__init__(name, reason, location=loc)
